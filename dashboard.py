@@ -834,19 +834,29 @@ def get_intro_charts():
     return fig_network, fig_bar
 
 def get_header():
-    return html.Nav(
-        className="navbar-custom",
-        style={"backgroundColor": THEME_COLOR, "padding": "15px 20px", "display": "flex", "alignItems": "center", "justifyContent": "space-between"},
-        children=[
-            html.Div(className="navbar-brand-group", style={"display": "flex", "alignItems": "center"}, children=[
-                html.Img(src=app.get_asset_url('iwmi.png'), style={"height": "50px", "marginRight": "15px", "filter": "brightness(0) invert(1)"}),
-                html.H1("Water Accounting Jordan", style={"color": "white", "margin": 0, "fontSize": "1.5rem", "fontWeight": "600", "fontFamily": "Segoe UI, sans-serif"}),
-            ]),
-            html.Div(className="nav-links", style={"display": "flex", "alignItems": "center"}, children=[
-                html.Img(src=app.get_asset_url('cgiar.png'), style={"height": "40px", "filter": "brightness(0) invert(1)"}),
+    return html.Div([
+        html.Nav(
+            className="navbar-custom",
+            style={"backgroundColor": THEME_COLOR, "padding": "15px 20px", "display": "flex", "alignItems": "center", "justifyContent": "space-between"},
+            children=[
+                html.Div(className="navbar-brand-group", style={"display": "flex", "alignItems": "center"}, children=[
+                    html.Img(src=app.get_asset_url('iwmi.png'), style={"height": "50px", "marginRight": "15px", "filter": "brightness(0) invert(1)"}),
+                    html.H1("Rapid Water Accounting - Jordan", style={"color": "white", "margin": 0, "fontSize": "1.5rem", "fontWeight": "600", "fontFamily": "Segoe UI, sans-serif"}),
+                ]),
+                html.Div(className="nav-links", style={"display": "flex", "alignItems": "center"}, children=[
+                    html.Img(src=app.get_asset_url('cgiar.png'), style={"height": "40px", "filter": "brightness(0) invert(1)"}),
+                ])
+            ]
+        ),
+        html.Div(style={"backgroundColor": "white", "borderBottom": "1px solid #dee2e6"}, children=[
+            dbc.Tabs(id="main-tabs", active_tab="tab-home", style={"paddingLeft": "20px", "paddingRight": "20px"}, children=[
+                dbc.Tab(label="Home", tab_id="tab-home", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
+                dbc.Tab(label="Introduction", tab_id="tab-intro", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
+                dbc.Tab(label="Framework", tab_id="tab-framework", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
+                dbc.Tab(label="WA+ Analysis", tab_id="tab-analysis", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
             ])
-        ]
-    )
+        ])
+    ])
 
 def get_footer():
     return html.Footer(className="site-footer", style={"backgroundColor": THEME_COLOR, "color": "white", "padding": "40px 20px", "marginTop": "40px"}, children=[
@@ -980,7 +990,7 @@ def get_modern_analysis_layout():
 
             dbc.Col([
                  html.H4("Study Area Map", style={"color": THEME_COLOR}),
-                 dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
+                 dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "300px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
             ], width=12, lg=8)
         ], className="mb-4"),
 
@@ -1006,7 +1016,7 @@ def get_modern_analysis_layout():
             ], width=12, lg=6)
         ], className="mb-4"),
 
-        # Row 4: Land Use Map (Bigger) & Land Use Graph (Smaller Legends)
+        # Row 4: Land Use Map (Full Width)
         dbc.Row([
             dbc.Col([
                 dbc.Card([
@@ -1016,8 +1026,11 @@ def get_modern_analysis_layout():
                         style={"padding": "0"}
                     )
                 ], className="h-100 shadow-sm")
-            ], width=12, lg=8), # Bigger width
+            ], width=12),
+        ], className="mb-4"),
 
+        # Row 5: Land Use Statistics (Full Width)
+        dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
@@ -1025,10 +1038,10 @@ def get_modern_analysis_layout():
                         dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle"),
                     ])
                 ], className="h-100 shadow-sm")
-            ], width=12, lg=4)
+            ], width=12)
         ], className="mb-4"),
 
-        # Row 5: Land Use Details Table (Full Width)
+        # Row 6: Land Use Details Table (Full Width)
         dbc.Row([
             dbc.Col([
                  html.H3("Land Use Details", className="text-primary mb-3", style={"color": THEME_COLOR}),
@@ -1108,12 +1121,6 @@ def get_modern_analysis_layout():
 # Define the app layout
 app.layout = html.Div([
     get_header(),
-    dbc.Tabs(id="main-tabs", active_tab="tab-home", style={"marginTop": "20px", "marginLeft": "20px", "marginRight": "20px"}, children=[
-        dbc.Tab(label="Home", tab_id="tab-home", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-        dbc.Tab(label="Introduction", tab_id="tab-intro", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-        dbc.Tab(label="Framework", tab_id="tab-framework", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-        dbc.Tab(label="WA+ Analysis", tab_id="tab-analysis", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-    ]),
     html.Div(id="tab-content", style={"padding": "20px", "minHeight": "600px", "backgroundColor": "#F8F9FA"}),
     get_footer()
 ])
@@ -1372,6 +1379,10 @@ def _hydro_figs(basin: str, start_year: int | None, end_year: int | None, vtype:
     spatial_mean_ts = da_ts.mean(dim=["latitude", "longitude"], skipna=True)
     try:
         monthly = spatial_mean_ts.groupby("time.month").mean(skipna=True).rename({"month": "Month"})
+        # Sort by water year (Oct start)
+        month_order = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        monthly = monthly.reindex(Month=month_order)
+
         months = [pd.to_datetime(m, format="%m").strftime("%b") for m in monthly["Month"].values]
         y_vals = np.asarray(monthly.values).flatten()
         fig_bar = px.bar(x=months, y=y_vals, title=f"Mean Monthly {vtype}")
@@ -1404,6 +1415,10 @@ def update_p_et_outputs(basin, start_year, end_year):
     spatial_mean = da_pet.mean(dim=["latitude", "longitude"], skipna=True)
     try:
         monthly = spatial_mean.groupby("time.month").mean(skipna=True)
+        # Sort by water year (Oct start)
+        month_order = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        monthly = monthly.reindex(month=month_order)
+
         months = [pd.to_datetime(m, format="%m").strftime("%b") for m in monthly["month"].values]
         y_vals = monthly.values.flatten()
         fig_bar = px.bar(x=months, y=y_vals, title="Mean Monthly P-ET")
@@ -1486,7 +1501,7 @@ def update_lu_map_and_coupling(basin):
     # Bar stats
     mask = ~np.isnan(z_vals)
     unique, counts = np.unique(z_vals[mask], return_counts=True)
-    total = counts.sum()
+    # total = counts.sum()
     stats = []
     for u, c in zip(unique, counts):
         if not np.isfinite(u):
@@ -1495,11 +1510,17 @@ def update_lu_map_and_coupling(basin):
             name = class_info.get(int(u), {}).get("name", str(u))
         except (ValueError, TypeError):
             continue
-        stats.append({"Class": name, "Pct": (c/total)*100})
-    df_stats = pd.DataFrame(stats).sort_values("Pct", ascending=False).head(5)
-    fig_bar = px.bar(df_stats, x="Pct", y="Class", orientation='h', title="Top Land Use Classes")
+        # Assuming 1 pixel = 1 km2
+        stats.append({"Class": name, "Area_km2": float(c)})
+    df_stats = pd.DataFrame(stats).sort_values("Area_km2", ascending=False).head(4)
+    fig_bar = px.bar(df_stats, x="Class", y="Area_km2", title="Top 4 Land Use Classes by Area")
     fig_bar.update_traces(marker_color=THEME_COLOR)
-    fig_bar.update_layout(plot_bgcolor='white', font=dict(family="Segoe UI"))
+    fig_bar.update_layout(
+        plot_bgcolor='white',
+        font=dict(family="Segoe UI"),
+        xaxis_title="Land Use Class",
+        yaxis_title="Area (km²)"
+    )
 
     return fig_map, fig_bar
 
