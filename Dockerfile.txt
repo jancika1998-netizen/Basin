@@ -1,0 +1,22 @@
+# Base image with GDAL/PROJ for Fiona/GeoPandas
+FROM osgeo/gdal:ubuntu-small-3.8.5
+
+# System Python + pip
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Python deps
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# App code (expects dashboard.py and basins/ folder)
+COPY . .
+
+# Hugging Face Spaces will set $PORT (usually 7860)
+ENV PORT=7860
+EXPOSE 7860
+
+CMD ["python3", "dashboard.py"]

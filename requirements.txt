@@ -1,0 +1,13 @@
+dash==2.17.1
+plotly>=5.22.0
+xarray
+pandas
+numpy
+geopandas
+fiona
+shapely>=2.0
+pyproj
+dash-bootstrap-components
+pytest
+h5netcdf
+netcdf4

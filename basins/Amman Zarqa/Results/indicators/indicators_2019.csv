@@ -1,0 +1,7 @@
+INDICATOR;VALUE;UNIT;DEFINITION;TRAFFIC_LIGHT
+Consumed Fraction;78.5;%;Fraction of available water consumed;Red
+Basin Closure;85.2;%;Degree to which outflows are committed;Orange
+Available Water Fraction;14.8;%;Fraction of water available for further use;Red
+Managed Water Fraction;62.3;%;Fraction of water managed by infrastructure;Green
+Storage Change Index;-5.2;%;Relative change in storage;Red
+Stationarity Index;0.8;unitless;Stationarity of the hydrological system;Yellow
