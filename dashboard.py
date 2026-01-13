@@ -941,49 +941,111 @@ def get_land_use_table(basin):
         )
     return table_component
 
-def get_modern_analysis_layout(basin):
+def get_modern_analysis_layout():
     """
     Generates the modern, interactive layout for the WA+ Analysis tab.
-    Includes Overview, Land Use, Climate (Tabs), and WA+ Reports.
-    Excludes Validation and Documentation as per new requirements.
+    Structured in 6 specific rows as requested.
     """
-    if not basin or basin == "none":
-        return html.Div()
+    return dbc.Container([
 
-    return html.Div([
-        # 1. Basin Overview Section
-        html.H3("Basin Overview", className="text-primary mb-3", style={"color": THEME_COLOR}),
-        dcc.Loading(html.Div(id="basin-overview-content"), type="circle"),
+        # Row 1: Controls (Left) and Study Area Map (Right)
+        dbc.Row([
+            dbc.Col([
+                html.H4("Controls", style={"color": THEME_COLOR, "marginBottom": "15px"}),
+                html.Label("Select Basin", style={"fontWeight": "bold", "color": THEME_COLOR}),
+                dcc.Dropdown(
+                    id="basin-dropdown",
+                    options=basin_options,
+                    value=None,
+                    placeholder="Select a basin...",
+                    style={"borderRadius": "4px"},
+                    persistence=True,
+                    persistence_type="session"
+                ),
+                html.Br(),
+                # Year Selection Panel
+                html.Div(id="year-selection-panel", style={"display": "none"}, children=[
+                        dbc.Row([
+                        dbc.Col([
+                            html.Label("Start Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
+                            dcc.Dropdown(id="global-start-year-dropdown", clearable=False, style={"borderRadius": "4px"}),
+                        ], width=6),
+                        dbc.Col([
+                            html.Label("End Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
+                            dcc.Dropdown(id="global-end-year-dropdown", clearable=False, style={"borderRadius": "4px"})
+                        ], width=6)
+                    ])
+                ]),
+            ], width=12, lg=4, className="mb-4 mb-lg-0"),
 
-        html.Hr(className="my-4"),
+            dbc.Col([
+                 html.H4("Study Area Map", style={"color": THEME_COLOR}),
+                 dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
+            ], width=12, lg=8)
+        ], className="mb-4"),
 
-        # 2. Land Use Analysis Section
-        html.H3("Land Use Analysis", className="text-primary mb-3", style={"color": THEME_COLOR}),
+        # Row 2: Study Area Description (Full Width)
+        dbc.Row([
+            dbc.Col([
+                 html.Div(id="study-area-container", style={"padding": "10px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}"}, children=[
+                    html.H4("Study Area Description", style={"color": THEME_COLOR, "fontSize": "1.1rem"}),
+                    dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.95rem"})
+                ])
+            ])
+        ], className="mb-4"),
+
+        # Row 3: Basin Overview & Executive Summary (2 Columns)
+        dbc.Row([
+            dbc.Col([
+                 html.H3("Basin Overview", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                 dcc.Loading(html.Div(id="basin-overview-metrics"), type="circle"),
+            ], width=12, lg=6),
+            dbc.Col([
+                 html.H3("Executive Summary", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                 dcc.Loading(html.Div(id="basin-overview-summary"), type="circle"),
+            ], width=12, lg=6)
+        ], className="mb-4"),
+
+        # Row 4: Land Use Map (Bigger) & Land Use Graph (Smaller Legends)
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader("Land Use Map", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
                     dbc.CardBody(
-                        dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "500px"}), type="circle"),
+                        dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px"}), type="circle"), # Increased height
                         style={"padding": "0"}
                     )
                 ], className="h-100 shadow-sm")
-            ], width=12, lg=7, className="mb-4 mb-lg-0"),
+            ], width=12, lg=8), # Bigger width
 
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
                     dbc.CardBody([
-                        dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "300px"}), type="circle"),
-                        html.Div("Land Use Details", style={"fontWeight": "bold", "marginTop": "20px", "marginBottom": "10px", "color": "#666"}),
-                        html.Div(id="basin-lu-table-container", style={"maxHeight": "300px", "overflowY": "auto", "fontSize": "0.85rem"}),
-                        html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
+                        dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle"),
                     ])
                 ], className="h-100 shadow-sm")
-            ], width=12, lg=5)
+            ], width=12, lg=4)
+        ], className="mb-4"),
+
+        # Row 5: Land Use Details Table (Full Width)
+        dbc.Row([
+            dbc.Col([
+                 html.H3("Land Use Details", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                 html.Div(id="basin-lu-table-container", style={"overflowY": "auto", "fontSize": "0.9rem"})
+            ])
+        ], className="mb-4"),
+
+        # Row 6: Land Use Description (Full Width)
+        dbc.Row([
+             dbc.Col([
+                html.H3("Land Use Description", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
+             ])
         ], className="mb-5"),
 
-        # 3. Climate & Water Balance Section
+        # Supplementary Sections (Climate & Reports)
+        html.Hr(),
         html.H3("Climate & Water Balance", className="text-primary mb-3", style={"color": THEME_COLOR}),
         dbc.Tabs([
             dbc.Tab(label="Precipitation", children=[
@@ -1023,7 +1085,6 @@ def get_modern_analysis_layout(basin):
             ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
         ], className="mb-5"),
 
-        # 4. WA+ Sheets Section
         html.H3("Water Accounting Reports", className="text-primary mb-3", style={"color": THEME_COLOR}),
         dbc.Row([
             dbc.Col([
@@ -1041,7 +1102,8 @@ def get_modern_analysis_layout(basin):
         ]),
         html.Div(id="wa-indicators-container", className="mt-3")
 
-    ], id="basin-analysis-content")
+    ], fluid=True, style={"paddingTop": "20px"})
+
 
 # Define the app layout
 app.layout = html.Div([
@@ -1122,59 +1184,7 @@ def render_tab_content(active_tab):
         ])
 
     elif active_tab == "tab-analysis":
-        return dbc.Container([
-            dbc.Row([
-                # --- Sidebar (Left) ---
-                dbc.Col([
-                    html.H4("Controls", style={"color": THEME_COLOR, "marginBottom": "15px"}),
-                    html.Label("Select Basin", style={"fontWeight": "bold", "color": THEME_COLOR}),
-                    dcc.Dropdown(
-                        id="basin-dropdown",
-                        options=basin_options,
-                        value=None,
-                        placeholder="Select a basin...",
-                        style={"borderRadius": "4px"},
-                        persistence=True,
-                        persistence_type="session"
-                    ),
-                    html.Br(),
-                    # Year Selection Panel
-                    html.Div(id="year-selection-panel", style={"display": "none"}, children=[
-                         dbc.Row([
-                            dbc.Col([
-                                html.Label("Start Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
-                                dcc.Dropdown(id="global-start-year-dropdown", clearable=False, style={"borderRadius": "4px"}),
-                            ], width=12),
-                            dbc.Col([
-                                html.Label("End Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
-                                dcc.Dropdown(id="global-end-year-dropdown", clearable=False, style={"borderRadius": "4px"})
-                            ], width=12)
-                        ])
-                    ]),
-                    html.Hr(),
-                     # Study Area Text
-                    html.Div(id="study-area-container", style={"padding": "10px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}"}, children=[
-                        html.H4("Study Area", style={"color": THEME_COLOR, "fontSize": "1.1rem"}),
-                        dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.85rem"})
-                    ])
-                ], width=12, lg=3, className="mb-4 mb-lg-0", style={"backgroundColor": "white", "padding": "20px", "borderRadius": "8px", "boxShadow": "0 2px 4px rgba(0,0,0,0.05)"}),
-
-                # --- Main Content (Right) ---
-                dbc.Col([
-                    # Study Area Map (Top)
-                    dbc.Row([
-                        dbc.Col([
-                             html.H4("Study Area Map", style={"color": THEME_COLOR}),
-                             dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
-                        ], width=12)
-                    ], className="mb-4"),
-
-                    # Dynamic Content for Selected Basin
-                    html.Div(id="basin-analysis-content")
-
-                ], width=12, lg=9)
-            ])
-        ], fluid=True, style={"paddingTop": "20px"})
+        return get_modern_analysis_layout()
 
     return html.Div("404")
 
@@ -1184,8 +1194,6 @@ def render_tab_content(active_tab):
 )
 def update_osm_map(basin):
     # This callback renders the OSM map with the basin shapefile.
-    # If no basin is selected, it shows all basins.
-    # If a basin is selected, it shows that basin zoomed in.
     return make_basin_selector_map(selected_basin=basin)
 
 @app.callback(
@@ -1216,15 +1224,7 @@ def update_lu_table_callback(basin):
     [State("basin-dropdown", "value")]
 )
 def map_click(clickData, current):
-    # If a basin is already selected (current is not None),
-    # we might want to allow re-selection from the OSM map if we support clicking.
-    # However, `make_basin_selector_map` only draws the selected basin when one is selected.
-    # So you can't easily click another.
-    # But if the user selects "Select a Basin..." (none), the map shows all.
-
     if current and current != "none":
-        # If we are zoomed in, maybe we don't change selection by click?
-        # Or maybe we do if they click the shape? But there's only one.
         return current
 
     if clickData and "points" in clickData:
@@ -1278,29 +1278,19 @@ def update_year_controls(basin):
     return opts, start, opts, end, {"display": "block", "width": "100%"}
 
 
-@app.callback(
-    Output("basin-analysis-content", "children"),
-    [Input("basin-dropdown", "value")]
-)
-def update_basin_analysis_content(basin):
-    if not basin or basin == "none" or basin == "all":
-        return html.Div()
-
-    return get_modern_analysis_layout(basin)
-
 # --- DATA PROCESSING LOGIC & WRAPPERS ---
 
 def update_basin_overview(basin, start_year, end_year):
     if not basin or basin == "none" or not start_year or not end_year:
         return html.Div("Select a specific basin and year range to view overview metrics.", 
-                       style={"textAlign": "center", "color": "#64748b", "padding": "40px"})
+                       style={"textAlign": "center", "color": "#64748b", "padding": "40px"}), html.Div()
     
     try:
         start_year, end_year = int(start_year), int(end_year)
         metrics = get_basin_overview_metrics_for_range(basin, start_year, end_year)
         
         if not metrics:
-            return html.Div(f"No overview data available for {basin} in {start_year}-{end_year}.")
+            return html.Div(f"No overview data available for {basin} in {start_year}-{end_year}."), html.Div()
         
         total_inflows = f"{metrics.get('total_inflows', 0):.0f}"
         precip_pct = f"{metrics.get('precipitation_percentage', 0):.0f}"
@@ -1334,17 +1324,18 @@ def update_basin_overview(basin, start_year, end_year):
             metric_cards.append(html.Div([
                 html.H4(m['title'], style={"fontSize": "14px", "color": "#64748b", "marginBottom": "5px"}),
                 html.Div(f"{m['value']:.0f} {m['unit']}", style={"fontSize": "24px", "fontWeight": "bold", "color": m['color']})
-            ], style={"display": "inline-block", "width": "23%", "margin": "1%", "padding": "20px", "backgroundColor": "white", "borderRadius": "8px", "boxShadow": "0 2px 4px rgba(0,0,0,0.05)"}))
+            ], style={"display": "inline-block", "width": "45%", "margin": "2%", "padding": "20px", "backgroundColor": "white", "borderRadius": "8px", "boxShadow": "0 2px 4px rgba(0,0,0,0.05)"}))
 
-        return html.Div([
-            html.Div(metric_cards, style={"marginBottom": "20px"}),
-            html.Div([
-                html.H5("Executive Summary", style={"color": THEME_COLOR, "fontWeight": "bold", "marginBottom": "10px"}),
+        metrics_div = html.Div(metric_cards)
+
+        summary_div = html.Div([
                 html.Ul([html.Li(item, style={"marginBottom": "8px"}) for item in summary_items], style={"paddingLeft": "20px"})
             ], style={"padding": "20px", "backgroundColor": "#eff6ff", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}", "color": "#2c3e50"})
-        ])
+
+        return metrics_div, summary_div
+
     except Exception as e:
-        return html.Div(f"Error: {e}")
+        return html.Div(f"Error: {e}"), html.Div()
 
 def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int, y_vals: np.ndarray, months: list):
     mean_val = np.nanmean(y_vals)
@@ -1485,7 +1476,8 @@ def update_lu_map_and_coupling(basin):
         legend=dict(
             title="Land Use Classes",
             yanchor="top", y=1.02,
-            xanchor="left", x=1.02
+            xanchor="left", x=1.02,
+            font=dict(size=10) # Smaller legend font
         )
     )
 
@@ -1530,7 +1522,8 @@ def update_wa_module(basin, start_year, end_year):
 # --- WRAPPER CALLBACKS ---
 
 @app.callback(
-    Output("basin-overview-content", "children"),
+    [Output("basin-overview-metrics", "children"),
+     Output("basin-overview-summary", "children")],
     [Input("basin-dropdown", "value"),
      Input("global-start-year-dropdown", "value"),
      Input("global-end-year-dropdown", "value")]
