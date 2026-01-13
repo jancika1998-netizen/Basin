@@ -517,6 +517,79 @@ def _create_clean_heatmap(da: xr.DataArray, title: str, colorscale="Viridis", z_
     )
     return fig
 
+def _create_landuse_heatmap(da: xr.DataArray, title: str):
+    if da is None:
+        return _empty_fig("No data to display")
+
+    z, x, y = _clean_nan_data(da)
+    if z is None:
+        return _empty_fig("No valid data values")
+
+    # Get unique values present in the data
+    unique_vals = np.unique(z)
+    unique_vals = unique_vals[np.isfinite(unique_vals)]
+    unique_vals.sort()
+
+    if len(unique_vals) == 0:
+        return _empty_fig("No valid data values")
+
+    # Map values to indices 0..N-1
+    val_to_idx = {v: i for i, v in enumerate(unique_vals)}
+    z_mapped = np.vectorize(val_to_idx.get)(z)
+
+    # Create colorscale and legend labels
+    colors = []
+    tickvals = []
+    ticktext = []
+
+    n_classes = len(unique_vals)
+
+    # Construct colorscale for discrete values
+    custom_colorscale = []
+
+    for i, val in enumerate(unique_vals):
+        cls_id = int(val)
+        info = class_info.get(cls_id, {"name": f"Class {cls_id}", "color": "rgb(0,0,0)"})
+        color = info["color"]
+        name = info["name"]
+
+        tickvals.append(i + 0.5)
+        ticktext.append(name)
+
+        # Normalize bounds for this class [i/N, (i+1)/N]
+        lower = i / n_classes
+        upper = (i + 1) / n_classes
+
+        custom_colorscale.append([lower, color])
+        custom_colorscale.append([upper, color])
+
+    fig = go.Figure()
+    fig.add_trace(go.Heatmap(
+        z=z_mapped, x=x, y=y,
+        colorscale=custom_colorscale,
+        zmin=0, zmax=n_classes,
+        colorbar=dict(
+            title="Land Use Class",
+            tickvals=tickvals,
+            ticktext=ticktext,
+            thickness=20,
+            len=0.9,
+            yanchor="middle", y=0.5
+        ),
+        hoverinfo="x+y+text",
+        text=[[class_info.get(int(val), {}).get("name", str(val)) if np.isfinite(val) else "No Data" for val in row] for row in z],
+        hovertemplate='Longitude: %{x:.2f}<br>Latitude: %{y:.2f}<br>Class: %{text}<extra></extra>'
+    ))
+
+    fig.update_layout(
+        title=dict(text=title, x=0.5, xanchor='center'),
+        xaxis_title="Longitude", yaxis_title="Latitude",
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        plot_bgcolor='white', paper_bgcolor='white',
+        font=dict(color="#1e293b"), margin=dict(l=50, r=50, t=60, b=50)
+    )
+    return fig
+
 def add_shapefile_to_fig(fig: go.Figure, basin_name: str) -> go.Figure:
     """Overlay basin boundary on a cartesian image figure."""
     shp_file = find_shp_file(basin_name)
@@ -832,6 +905,11 @@ def get_land_use_layout(basin):
     # Read Land Use Text
     lu_text = read_basin_text(basin, "lu.txt")
 
+    # Read Study Area Text
+    study_area_text = read_basin_text(basin, "study area.txt")
+    if "No text available" in study_area_text:
+        study_area_text = read_basin_text(basin, "studyarea.txt")
+
     # Table logic
     table_component = html.Div("No table data available.")
     if basin == "Amman Zarqa":
@@ -869,12 +947,22 @@ def get_land_use_layout(basin):
     return html.Div([
         html.H3("Land Use (Latest Year)", style={"color": THEME_COLOR, "marginTop": "20px", "borderBottom": f"2px solid {THEME_COLOR}", "paddingBottom": "10px"}),
 
+        # Map (Top) - Full Width or centered
+        dcc.Loading(dcc.Graph(id="lu-map-graph"), type="circle"),
+
+        # Table (Smaller width)
+        html.Div(table_component, style={"marginTop": "20px", "marginBottom": "30px", "overflowX": "auto", "maxWidth": "80%", "marginLeft": "auto", "marginRight": "auto"}),
+
+        # Site Description
+        html.H4("Site Description", style={"color": THEME_COLOR, "marginTop": "30px", "borderBottom": "1px solid #eee", "paddingBottom": "5px"}),
+        dcc.Markdown(study_area_text, className="markdown-content"),
+
+        # Land Use Paragraphs
+        html.H4("Land Use Details", style={"color": THEME_COLOR, "marginTop": "30px", "borderBottom": "1px solid #eee", "paddingBottom": "5px"}),
         dcc.Markdown(lu_text, className="markdown-content"),
-        html.Div(table_component, style={"marginTop": "20px", "marginBottom": "30px", "overflowX": "auto"}),
-        html.Div([
-            html.Div(dcc.Loading(dcc.Graph(id="lu-map-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-            html.Div(dcc.Loading(dcc.Graph(id="lu-bar-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "float": "right", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-        ]),
+
+        # Bar Graph (kept at bottom or where it fits)
+        html.Div(dcc.Loading(dcc.Graph(id="lu-bar-graph"), type="circle"), style={"marginTop": "30px"}),
     ], id="section-land-use")
 
 def get_climate_inputs_layout(basin):
@@ -998,9 +1086,7 @@ def render_tab_content(active_tab):
                                     style={"borderRadius": "4px"},
                                     persistence=True,
                                     persistence_type="session"
-                                ),
-                                # Study Area Text Area
-                                html.Div(id="study-area-container", style={"marginTop": "20px", "padding": "20px", "backgroundColor": "#f0f4f8", "borderRadius": "8px", "fontSize": "1rem", "lineHeight": "1.8", "color": "#2c3e50", "textAlign": "justify", "borderLeft": f"4px solid {THEME_COLOR}"})
+                                )
                             ], style={"width": "30%", "display": "inline-block", "verticalAlign": "top"}),
 
                             html.Div([
@@ -1033,19 +1119,6 @@ def map_click(clickData, current):
         return clickData["points"][0].get("location", current)
     return current
 
-@app.callback(
-    Output("study-area-container", "children"),
-    [Input("basin-dropdown", "value")]
-)
-def update_study_area_text(basin):
-    if not basin or basin == "none" or basin == "all":
-        return "Select a basin to view study area details."
-
-    text = read_basin_text(basin, "study area.txt")
-    if "No text available" in text:
-        text = read_basin_text(basin, "studyarea.txt") # Fallback to no-space version if needed
-
-    return [html.H4(f"{basin} Study Area", style={"marginTop": "0", "color": THEME_COLOR}), dcc.Markdown(text)]
 
 def get_year_options(basin):
     p_fp = find_nc_file(basin, "P")
@@ -1274,17 +1347,39 @@ def update_p_et_outputs(basin, start_year, end_year):
 def update_lu_map_and_coupling(basin):
     if not basin or basin == "none": return _empty_fig(), _empty_fig()
 
-    da_lu, _, _ = load_and_process_data(basin, "LU", year_start=2020, year_end=2020)
+    # Automatically find latest year by passing None
+    da_lu, _, filename = load_and_process_data(basin, "LU", year_start=None, year_end=None)
     
     if da_lu is None: return _empty_fig("No LU Data"), _empty_fig()
 
+    # Ensure data is 2D
+    if "time" in da_lu.dims:
+        da_lu = da_lu.isel(time=-1)
+
+    # Try to extract year from filename or time dimension
+    year_label = "Latest Year"
+    try:
+        if "time" in da_lu.coords:
+            t = pd.to_datetime(da_lu["time"].values)
+            if hasattr(t, "year"):
+                year_label = str(t.year)
+            # If t is a numpy array (0d)
+            elif hasattr(t, "item"):
+                 year_label = str(pd.to_datetime(t.item()).year)
+        elif filename:
+            import re
+            m = re.search(r"(\d{4})", filename)
+            if m:
+                year_label = m.group(1)
+    except:
+        pass
+
     # Map
-    vals = da_lu.values
-    # Just return a simple heatmap for now to ensure it works
-    fig_map = px.imshow(vals, origin='lower', title="Land Use")
+    fig_map = _create_landuse_heatmap(da_lu, f"Land Use ({year_label})")
     fig_map = add_shapefile_to_fig(fig_map, basin)
 
     # Bar stats
+    vals = da_lu.values
     unique, counts = np.unique(vals[np.isfinite(vals)], return_counts=True)
     total = counts.sum()
     stats = []
