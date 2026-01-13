@@ -756,10 +756,106 @@ LAND_USE_DATA = [
     {"Class": "Total", "Subclass": "", "Area_Sub_km2": 4829.89, "Area_Class_km2": 4829.89, "Area_Pct": 100, "P": None, "ET": None, "P_ET": None},
 ]
 
+GLOSSARY_DATA = {
+    "WEC": "Water Efficiency and Conservation - A USAID activity.",
+    "IWMI": "International Water Management Institute - A non-profit research organization.",
+    "CGIAR": "Consultative Group on International Agricultural Research - A global partnership for a food-secure future.",
+    "WA+": "Water Accounting Plus - A framework to assess water resources using remote sensing.",
+    "MWI": "Ministry of Water and Irrigation - The government body responsible for water in Jordan.",
+    "MoA": "Ministry of Agriculture - The government body responsible for agriculture.",
+    "USAID": "United States Agency for International Development.",
+    "ET": "Evapotranspiration - The sum of evaporation and transpiration.",
+    "Precipitation": "Water released from clouds in the form of rain, freezing rain, sleet, snow, or hail.",
+    "Inflows": "Water entering a basin from surface or groundwater sources.",
+}
+
 
 # ==================
 # LAYOUT COMPONENTS
 # ==================
+
+def get_framework_diagram():
+    # Sankey Diagram for WA+ Equation 2
+    fig = go.Figure(data=[go.Sankey(
+        node = dict(
+          pad = 15,
+          thickness = 20,
+          line = dict(color = "black", width = 0.5),
+          label = ["Precipitation (P)", "Inflows (Qin)", "Basin Water Resources",
+                   "Evapotranspiration (ET)", "Consumption (CWsec)", "Treated Wastewater (QWWT)",
+                   "Recharge (Qre)", "Natural Outflow (Qnatural)"],
+          color = [THEME_COLOR, THEME_COLOR, "#2ecc71", "#e74c3c", "#e74c3c", "#e74c3c", "#e74c3c", "#e74c3c"]
+        ),
+        link = dict(
+          source = [0, 1, 2, 2, 2, 2, 2], # indices match labels
+          target = [2, 2, 3, 4, 5, 6, 7],
+          value =  [400, 50, 200, 100, 50, 50, 50] # Arbitrary representative values
+      ))])
+
+    fig.update_layout(title_text="Water Balance Framework Flow", font_size=12, height=400, plot_bgcolor='white')
+    return fig
+
+def get_intro_charts():
+    # 1. Partners Network Graph (simplified as Scatter)
+    pos = {
+        "USAID": (0, 1),
+        "WEC": (0, 0),
+        "IWMI": (-1, 0),
+        "MWI": (1, 0.5),
+        "MoA": (1, -0.5)
+    }
+
+    edge_x = []
+    edge_y = []
+    for edge in [("USAID", "WEC"), ("IWMI", "WEC"), ("WEC", "MWI"), ("WEC", "MoA")]:
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
+        edge_x.extend([x0, x1, None])
+        edge_y.extend([y0, y1, None])
+
+    edge_trace = go.Scatter(
+        x=edge_x, y=edge_y,
+        line=dict(width=2, color='#888'),
+        hoverinfo='none',
+        mode='lines')
+
+    node_x = [pos[k][0] for k in pos]
+    node_y = [pos[k][1] for k in pos]
+    node_text = list(pos.keys())
+
+    node_trace = go.Scatter(
+        x=node_x, y=node_y,
+        mode='markers+text',
+        text=node_text,
+        textposition="top center",
+        marker=dict(
+            showscale=False,
+            color=THEME_COLOR,
+            size=30,
+            line_width=2))
+
+    fig_network = go.Figure(data=[edge_trace, node_trace],
+                 layout=go.Layout(
+                    title='Project Partnership Structure',
+                    showlegend=False,
+                    hovermode='closest',
+                    margin=dict(b=20,l=5,r=5,t=40),
+                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    plot_bgcolor='white',
+                    height=300
+                    ))
+
+    # 2. Water Scarcity Drivers
+    drivers = ["Population Growth", "Climate Change", "Water Demand", "Urbanization"]
+    impact = [85, 75, 90, 60]
+
+    fig_bar = px.bar(x=drivers, y=impact, title="Drivers of Water Scarcity",
+                     labels={'x': 'Driver', 'y': 'Relative Impact Score'})
+    fig_bar.update_traces(marker_color=THEME_COLOR)
+    fig_bar.update_layout(plot_bgcolor='white', height=300)
+
+    return fig_network, fig_bar
 
 def get_header():
     return html.Nav(
@@ -952,22 +1048,59 @@ def render_tab_content(active_tab):
         return get_home_content()
 
     elif active_tab == "tab-intro":
+        fig_network, fig_scarcity = get_intro_charts()
         return html.Div(className="container", style={"maxWidth": "1200px"}, children=[
              html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "marginBottom": "30px"}, children=[
                 html.H2("Introduction", style={"color": THEME_COLOR, "marginBottom": "20px"}),
-                dcc.Markdown(INTRO_TEXT, className="markdown-content")
+                dcc.Markdown(INTRO_TEXT, className="markdown-content"),
+                dbc.Row([
+                    dbc.Col(dcc.Graph(figure=fig_network, config={'displayModeBar': False}), width=12, lg=6),
+                    dbc.Col(dcc.Graph(figure=fig_scarcity, config={'displayModeBar': False}), width=12, lg=6),
+                ], style={"marginTop": "30px"})
             ]),
-            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"}, children=[
+            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "marginBottom": "30px"}, children=[
                 html.H2("Objectives and Deliverables", style={"color": THEME_COLOR, "marginBottom": "20px"}),
                 dcc.Markdown(OBJECTIVES_TEXT, className="markdown-content")
+            ]),
+            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"}, children=[
+                html.H2("Key Terms Glossary", style={"color": THEME_COLOR, "marginBottom": "20px"}),
+                dcc.Input(id="intro-search-input", type="text", placeholder="Search key terms...", style={"width": "100%", "padding": "10px", "borderRadius": "5px", "border": "1px solid #ccc", "marginBottom": "20px"}),
+                html.Div(id="intro-search-results")
             ])
         ])
 
     elif active_tab == "tab-framework":
+        fig_framework = get_framework_diagram()
         return html.Div(className="container", style={"maxWidth": "1200px"}, children=[
-            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"}, children=[
+            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "marginBottom": "30px"}, children=[
                 html.H2("Customized WA+ Analytics for Jordan", style={"color": THEME_COLOR, "marginBottom": "20px"}),
-                dcc.Markdown(WA_FRAMEWORK_TEXT, className="markdown-content")
+                dcc.Markdown(WA_FRAMEWORK_TEXT, className="markdown-content"),
+                dcc.Graph(id="framework-diagram", figure=fig_framework)
+            ]),
+            html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"}, children=[
+                html.H2("Interactive Water Balance Simulator", style={"color": THEME_COLOR, "marginBottom": "20px"}),
+                html.P("Adjust the sliders to see how different components affect the Basin Storage Change (∆S).", style={"color": "#666"}),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Precipitation (P)", style={"fontWeight": "bold"}),
+                        dcc.Slider(id="fw-p", min=0, max=1000, value=400, marks={0:'0', 500:'500', 1000:'1000'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        html.Label("Inflows (Qin)", style={"fontWeight": "bold", "marginTop": "15px"}),
+                        dcc.Slider(id="fw-qin", min=0, max=500, value=50, marks={0:'0', 250:'250', 500:'500'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        html.Label("Evapotranspiration (ET)", style={"fontWeight": "bold", "marginTop": "15px"}),
+                        dcc.Slider(id="fw-et", min=0, max=1000, value=450, marks={0:'0', 500:'500', 1000:'1000'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        html.Label("Consumption (CWsec)", style={"fontWeight": "bold", "marginTop": "15px"}),
+                        dcc.Slider(id="fw-cw", min=0, max=500, value=100, marks={0:'0', 250:'250', 500:'500'}, tooltip={"placement": "bottom", "always_visible": True}),
+                    ], width=12, lg=6),
+                    dbc.Col([
+                        html.Label("Wastewater Return (Q_WWT)", style={"fontWeight": "bold"}),
+                        dcc.Slider(id="fw-wwt", min=0, max=200, value=30, marks={0:'0', 100:'100', 200:'200'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        html.Label("Recharge (Q_re)", style={"fontWeight": "bold", "marginTop": "15px"}),
+                        dcc.Slider(id="fw-re", min=0, max=200, value=20, marks={0:'0', 100:'100', 200:'200'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        html.Label("Natural Outflow (Q_natural)", style={"fontWeight": "bold", "marginTop": "15px"}),
+                        dcc.Slider(id="fw-nat", min=0, max=200, value=10, marks={0:'0', 100:'100', 200:'200'}, tooltip={"placement": "bottom", "always_visible": True}),
+                        dcc.Graph(id="fw-balance-graph", style={"marginTop": "20px"})
+                    ], width=12, lg=6)
+                ])
             ])
         ])
 
@@ -1508,6 +1641,56 @@ def update_land_use_text(basin):
     if not basin or basin == "none":
         return "Select a basin to view land use details."
     return read_basin_text(basin, "lu.txt")
+
+@app.callback(
+    Output("intro-search-results", "children"),
+    [Input("intro-search-input", "value")]
+)
+def update_glossary_search(search_term):
+    if not search_term:
+        filtered = GLOSSARY_DATA
+    else:
+        filtered = {k: v for k, v in GLOSSARY_DATA.items() if search_term.lower() in k.lower() or search_term.lower() in v.lower()}
+
+    if not filtered:
+        return html.P("No results found.", style={"color": "#666"})
+
+    items = []
+    for k, v in filtered.items():
+        items.append(html.Div([
+            html.H5(k, style={"color": THEME_COLOR, "fontWeight": "bold"}),
+            html.P(v, style={"color": "#444", "marginBottom": "15px", "borderBottom": "1px solid #eee", "paddingBottom": "10px"})
+        ]))
+    return html.Div(items)
+
+@app.callback(
+    Output("fw-balance-graph", "figure"),
+    [Input("fw-p", "value"), Input("fw-qin", "value"),
+     Input("fw-et", "value"), Input("fw-cw", "value"),
+     Input("fw-wwt", "value"), Input("fw-re", "value"), Input("fw-nat", "value")]
+)
+def update_framework_simulation(p, qin, et, cw, wwt, re, nat):
+    p = p or 0
+    qin = qin or 0
+    et = et or 0
+    cw = cw or 0
+    wwt = wwt or 0
+    re = re or 0
+    nat = nat or 0
+
+    inflows = p + qin
+    outflows = et + cw + wwt + re + nat
+    delta_s = inflows - outflows
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=["Inflows", "Outflows", "Change in Storage"], y=[inflows, outflows, delta_s],
+                         marker_color=["#2ecc71", "#e74c3c", THEME_COLOR],
+                         text=[f"{inflows}", f"{outflows}", f"{delta_s}"],
+                         textposition='auto'))
+
+    fig.update_layout(title="Water Balance Simulation", yaxis_title="Volume (Mm3/year)",
+                      plot_bgcolor='white', height=300)
+    return fig
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 7860)), debug=False)
