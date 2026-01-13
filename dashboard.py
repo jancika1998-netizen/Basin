@@ -480,6 +480,90 @@ def load_and_process_data(basin_name: str, variable_type: str,
 
 THEME_COLOR = "#2B587A"
 
+# Land use class information
+class_info = {
+    1: {"name": "Protected forests", "color": "rgb(0,40,0)"},
+    2: {"name": "Protected shrubland", "color": "rgb(190,180,60)"},
+    3: {"name": "Protected natural grasslands", "color": "rgb(176,255,33)"},
+    4: {"name": "Protected natural waterbodies", "color": "rgb(83,142,213)"},
+    5: {"name": "Protected wetlands", "color": "rgb(40,250,180)"},
+    6: {"name": "Glaciers", "color": "rgb(255,255,255)"},
+    7: {"name": "Protected other", "color": "rgb(219,214,0)"},
+    8: {"name": "Closed deciduous forest", "color": "rgb(0,70,0)"},
+    9: {"name": "Open deciduous forest", "color": "rgb(0,124,0)"},
+    10: {"name": "Closed evergreen forest", "color": "rgb(0,100,0)"},
+    11: {"name": "Open evergreen forest", "color": "rgb(0,140,0)"},
+    12: {"name": "Closed savanna", "color": "rgb(155,150,50)"},
+    13: {"name": "Open savanna", "color": "rgb(255,190,90)"},
+    14: {"name": "Shrub land & mesquite", "color": "rgb(120,150,30)"},
+    15: {"name": "Herbaceous cover", "color": "rgb(90,115,25)"},
+    16: {"name": "Meadows & open grassland", "color": "rgb(140,190,100)"},
+    17: {"name": "Riparian corridor", "color": "rgb(30,190,170)"},
+    18: {"name": "Deserts", "color": "rgb(245,255,230)"},
+    19: {"name": "Wadis", "color": "rgb(200,230,255)"},
+    20: {"name": "Natural alpine pastures", "color": "rgb(86,134,0)"},
+    21: {"name": "Rocks & gravel & stones & boulders", "color": "rgb(255,210,110)"},
+    22: {"name": "Permafrosts", "color": "rgb(230,230,230)"},
+    23: {"name": "Brooks & rivers & waterfalls", "color": "rgb(0,100,240)"},
+    24: {"name": "Natural lakes", "color": "rgb(0,55,154)"},
+    25: {"name": "Flood plains & mudflats", "color": "rgb(165,230,100)"},
+    26: {"name": "Saline sinks & playas & salinized soil", "color": "rgb(210,230,210)"},
+    27: {"name": "Bare soil", "color": "rgb(240,165,20)"},
+    28: {"name": "Waste land", "color": "rgb(230,220,210)"},
+    29: {"name": "Moorland", "color": "rgb(190,160,140)"},
+    30: {"name": "Wetland", "color": "rgb(33,193,132)"},
+    31: {"name": "Mangroves", "color": "rgb(28,164,112)"},
+    32: {"name": "Alien invasive species", "color": "rgb(100,255,150)"},
+    33: {"name": "Rainfed forest plantations", "color": "rgb(245,250,194)"},
+    34: {"name": "Rainfed production pastures", "color": "rgb(237,246,152)"},
+    35: {"name": "Rainfed crops - cereals", "color": "rgb(226,240,90)"},
+    36: {"name": "Rainfed crops - root/tuber", "color": "rgb(209,229,21)"},
+    37: {"name": "Rainfed crops - legumious", "color": "rgb(182,199,19)"},
+    38: {"name": "Rainfed crops - sugar", "color": "rgb(151,165,15)"},
+    39: {"name": "Rainfed crops - fruit and nuts", "color": "rgb(132,144,14)"},
+    40: {"name": "Rainfed crops - vegetables and melons", "color": "rgb(112,122,12)"},
+    41: {"name": "Rainfed crops - oilseed", "color": "rgb(92,101,11)"},
+    42: {"name": "Rainfed crops - beverage and spice", "color": "rgb(71,80,8)"},
+    43: {"name": "Rainfed crops - other", "color": "rgb(51,57,5)"},
+    44: {"name": "Mixed species agro-forestry", "color": "rgb(80,190,40)"},
+    45: {"name": "Fallow & idle land", "color": "rgb(180,160,180)"},
+    46: {"name": "Dump sites & deposits", "color": "rgb(145,130,115)"},
+    47: {"name": "Rainfed homesteads and gardens (urban cities) - outdoor", "color": "rgb(120,5,25)"},
+    48: {"name": "Rainfed homesteads and gardens (rural villages) - outdoor", "color": "rgb(210,10,40)"},
+    49: {"name": "Rainfed industry parks - outdoor", "color": "rgb(255,130,45)"},
+    50: {"name": "Rainfed parks (leisure & sports)", "color": "rgb(250,101,0)"},
+    51: {"name": "Rural paved surfaces (lots, roads, lanes)", "color": "rgb(255,150,150)"},
+    52: {"name": "Irrigated forest plantations", "color": "rgb(179,243,241)"},
+    53: {"name": "Irrigated production pastures", "color": "rgb(158,240,238)"},
+    54: {"name": "Irrigated crops - cereals", "color": "rgb(113,233,230)"},
+    55: {"name": "Irrigated crops - root/tubers", "color": "rgb(82,228,225)"},
+    56: {"name": "Irrigated crops - legumious", "color": "rgb(53,223,219)"},
+    57: {"name": "Irrigated crops - sugar", "color": "rgb(33,205,201)"},
+    58: {"name": "Irrigated crops - fruit and nuts", "color": "rgb(29,179,175)"},
+    59: {"name": "Irrigated crops - vegetables and melons", "color": "rgb(25,151,148)"},
+    60: {"name": "Irrigated crops - Oilseed", "color": "rgb(21,125,123)"},
+    61: {"name": "Irrigated crops - beverage and spice", "color": "rgb(17,101,99)"},
+    62: {"name": "Irrigated crops - other", "color": "rgb(13,75,74)"},
+    63: {"name": "Managed water bodies (reservoirs, canals, harbors, tanks)", "color": "rgb(0,40,112)"},
+    64: {"name": "Greenhouses - indoor", "color": "rgb(255,204,255)"},
+    65: {"name": "Aquaculture", "color": "rgb(47,121,255)"},
+    66: {"name": "Domestic households - indoor (sanitation)", "color": "rgb(255,60,10)"},
+    67: {"name": "Manufacturing & commercial industry - indoor", "color": "rgb(180,180,180)"},
+    68: {"name": "Irrigated homesteads and gardens (urban cities) - outdoor", "color": "rgb(255,139,255)"},
+    69: {"name": "Irrigated homesteads and gardens (rural villages) - outdoor", "color": "rgb(255,75,255)"},
+    70: {"name": "Irrigated industry parks - outdoor", "color": "rgb(140,140,140)"},
+    71: {"name": "Irrigated parks (leisure, sports)", "color": "rgb(150,0,205)"},
+    72: {"name": "Urban paved Surface (lots, roads, lanes)", "color": "rgb(120,120,120)"},
+    73: {"name": "Livestock and domestic husbandry", "color": "rgb(180,130,130)"},
+    74: {"name": "Managed wetlands & swamps", "color": "rgb(30,130,115)"},
+    75: {"name": "Managed other inundation areas", "color": "rgb(20,150,130)"},
+    76: {"name": "Mining/ quarry & shale exploiration", "color": "rgb(100,100,100)"},
+    77: {"name": "Evaporation ponds", "color": "rgb(30,90,130)"},
+    78: {"name": "Waste water treatment plants", "color": "rgb(60,60,60)"},
+    79: {"name": "Hydropower plants", "color": "rgb(40,40,40)"},
+    80: {"name": "Thermal power plants", "color": "rgb(0,0,0)"},
+}
+
 def _clean_nan_data(da: xr.DataArray):
     """Remove NaN values and return clean data for plotting"""
     if da is None:
@@ -535,7 +619,9 @@ def _create_landuse_heatmap(da: xr.DataArray, title: str):
 
     # Map values to indices 0..N-1
     val_to_idx = {v: i for i, v in enumerate(unique_vals)}
-    z_mapped = np.vectorize(val_to_idx.get)(z)
+    z_mapped = np.full(z.shape, np.nan)
+    for v, idx in val_to_idx.items():
+        z_mapped[z == v] = idx
 
     # Create colorscale and legend labels
     colors = []
@@ -672,90 +758,6 @@ def make_basin_selector_map(selected_basin=None) -> go.Figure:
     )
     return fig
 
-
-# Land use class information (truncated for brevity, same as before)
-class_info = {
-    1: {"name": "Protected forests", "color": "rgb(0,40,0)"},
-    2: {"name": "Protected shrubland", "color": "rgb(190,180,60)"},
-    3: {"name": "Protected natural grasslands", "color": "rgb(176,255,33)"},
-    4: {"name": "Protected natural waterbodies", "color": "rgb(83,142,213)"},
-    5: {"name": "Protected wetlands", "color": "rgb(40,250,180)"},
-    6: {"name": "Glaciers", "color": "rgb(255,255,255)"},
-    7: {"name": "Protected other", "color": "rgb(219,214,0)"},
-    8: {"name": "Closed deciduous forest", "color": "rgb(0,70,0)"},
-    9: {"name": "Open deciduous forest", "color": "rgb(0,124,0)"},
-    10: {"name": "Closed evergreen forest", "color": "rgb(0,100,0)"},
-    11: {"name": "Open evergreen forest", "color": "rgb(0,140,0)"},
-    12: {"name": "Closed savanna", "color": "rgb(155,150,50)"},
-    13: {"name": "Open savanna", "color": "rgb(255,190,90)"},
-    14: {"name": "Shrub land & mesquite", "color": "rgb(120,150,30)"},
-    15: {"name": "Herbaceous cover", "color": "rgb(90,115,25)"},
-    16: {"name": "Meadows & open grassland", "color": "rgb(140,190,100)"},
-    17: {"name": "Riparian corridor", "color": "rgb(30,190,170)"},
-    18: {"name": "Deserts", "color": "rgb(245,255,230)"},
-    19: {"name": "Wadis", "color": "rgb(200,230,255)"},
-    20: {"name": "Natural alpine pastures", "color": "rgb(86,134,0)"},
-    21: {"name": "Rocks & gravel & stones & boulders", "color": "rgb(255,210,110)"},
-    22: {"name": "Permafrosts", "color": "rgb(230,230,230)"},
-    23: {"name": "Brooks & rivers & waterfalls", "color": "rgb(0,100,240)"},
-    24: {"name": "Natural lakes", "color": "rgb(0,55,154)"},
-    25: {"name": "Flood plains & mudflats", "color": "rgb(165,230,100)"},
-    26: {"name": "Saline sinks & playas & salinized soil", "color": "rgb(210,230,210)"},
-    27: {"name": "Bare soil", "color": "rgb(240,165,20)"},
-    28: {"name": "Waste land", "color": "rgb(230,220,210)"},
-    29: {"name": "Moorland", "color": "rgb(190,160,140)"},
-    30: {"name": "Wetland", "color": "rgb(33,193,132)"},
-    31: {"name": "Mangroves", "color": "rgb(28,164,112)"},
-    32: {"name": "Alien invasive species", "color": "rgb(100,255,150)"},
-    33: {"name": "Rainfed forest plantations", "color": "rgb(245,250,194)"},
-    34: {"name": "Rainfed production pastures", "color": "rgb(237,246,152)"},
-    35: {"name": "Rainfed crops - cereals", "color": "rgb(226,240,90)"},
-    36: {"name": "Rainfed crops - root/tuber", "color": "rgb(209,229,21)"},
-    37: {"name": "Rainfed crops - legumious", "color": "rgb(182,199,19)"},
-    38: {"name": "Rainfed crops - sugar", "color": "rgb(151,165,15)"},
-    39: {"name": "Rainfed crops - fruit and nuts", "color": "rgb(132,144,14)"},
-    40: {"name": "Rainfed crops - vegetables and melons", "color": "rgb(112,122,12)"},
-    41: {"name": "Rainfed crops - oilseed", "color": "rgb(92,101,11)"},
-    42: {"name": "Rainfed crops - beverage and spice", "color": "rgb(71,80,8)"},
-    43: {"name": "Rainfed crops - other", "color": "rgb(51,57,5)"},
-    44: {"name": "Mixed species agro-forestry", "color": "rgb(80,190,40)"},
-    45: {"name": "Fallow & idle land", "color": "rgb(180,160,180)"},
-    46: {"name": "Dump sites & deposits", "color": "rgb(145,130,115)"},
-    47: {"name": "Rainfed homesteads and gardens (urban cities) - outdoor", "color": "rgb(120,5,25)"},
-    48: {"name": "Rainfed homesteads and gardens (rural villages) - outdoor", "color": "rgb(210,10,40)"},
-    49: {"name": "Rainfed industry parks - outdoor", "color": "rgb(255,130,45)"},
-    50: {"name": "Rainfed parks (leisure & sports)", "color": "rgb(250,101,0)"},
-    51: {"name": "Rural paved surfaces (lots, roads, lanes)", "color": "rgb(255,150,150)"},
-    52: {"name": "Irrigated forest plantations", "color": "rgb(179,243,241)"},
-    53: {"name": "Irrigated production pastures", "color": "rgb(158,240,238)"},
-    54: {"name": "Irrigated crops - cereals", "color": "rgb(113,233,230)"},
-    55: {"name": "Irrigated crops - root/tubers", "color": "rgb(82,228,225)"},
-    56: {"name": "Irrigated crops - legumious", "color": "rgb(53,223,219)"},
-    57: {"name": "Irrigated crops - sugar", "color": "rgb(33,205,201)"},
-    58: {"name": "Irrigated crops - fruit and nuts", "color": "rgb(29,179,175)"},
-    59: {"name": "Irrigated crops - vegetables and melons", "color": "rgb(25,151,148)"},
-    60: {"name": "Irrigated crops - Oilseed", "color": "rgb(21,125,123)"},
-    61: {"name": "Irrigated crops - beverage and spice", "color": "rgb(17,101,99)"},
-    62: {"name": "Irrigated crops - other", "color": "rgb(13,75,74)"},
-    63: {"name": "Managed water bodies (reservoirs, canals, harbors, tanks)", "color": "rgb(0,40,112)"},
-    64: {"name": "Greenhouses - indoor", "color": "rgb(255,204,255)"},
-    65: {"name": "Aquaculture", "color": "rgb(47,121,255)"},
-    66: {"name": "Domestic households - indoor (sanitation)", "color": "rgb(255,60,10)"},
-    67: {"name": "Manufacturing & commercial industry - indoor", "color": "rgb(180,180,180)"},
-    68: {"name": "Irrigated homesteads and gardens (urban cities) - outdoor", "color": "rgb(255,139,255)"},
-    69: {"name": "Irrigated homesteads and gardens (rural villages) - outdoor", "color": "rgb(255,75,255)"},
-    70: {"name": "Irrigated industry parks - outdoor", "color": "rgb(140,140,140)"},
-    71: {"name": "Irrigated parks (leisure, sports)", "color": "rgb(150,0,205)"},
-    72: {"name": "Urban paved Surface (lots, roads, lanes)", "color": "rgb(120,120,120)"},
-    73: {"name": "Livestock and domestic husbandry", "color": "rgb(180,130,130)"},
-    74: {"name": "Managed wetlands & swamps", "color": "rgb(30,130,115)"},
-    75: {"name": "Managed other inundation areas", "color": "rgb(20,150,130)"},
-    76: {"name": "Mining/ quarry & shale exploiration", "color": "rgb(100,100,100)"},
-    77: {"name": "Evaporation ponds", "color": "rgb(30,90,130)"},
-    78: {"name": "Waste water treatment plants", "color": "rgb(60,60,60)"},
-    79: {"name": "Hydropower plants", "color": "rgb(40,40,40)"},
-    80: {"name": "Thermal power plants", "color": "rgb(0,0,0)"},
-}
 
 # ===========
 # DASH APP
@@ -1068,35 +1070,37 @@ def render_tab_content(active_tab):
         ])
 
     elif active_tab == "tab-analysis":
-        return html.Div(className="container", style={"maxWidth": "1200px"}, children=[
-            html.Div(
-                className="filters-panel",
-                style={"marginTop": "20px"},
-                children=[
-                    html.Div(children=[
-                        html.H3("Select Basin", style={"color": THEME_COLOR, "marginBottom": "20px", "fontWeight": "600", "fontSize": "1.8rem"}),
-                        html.Div([
-                            html.Div([
-                                    html.Label("Choose from list:", style={"fontWeight": "bold", "marginBottom": "10px", "display": "block", "color": THEME_COLOR}),
-                                    dcc.Dropdown(
-                                    id="basin-dropdown",
-                                    options=basin_options,
-                                    value=None,
-                                    placeholder="Select a basin...",
-                                    style={"borderRadius": "4px"},
-                                    persistence=True,
-                                    persistence_type="session"
-                                )
-                            ], style={"width": "30%", "display": "inline-block", "verticalAlign": "top"}),
+        return html.Div(className="container", style={"maxWidth": "1600px", "marginTop": "20px"}, children=[
+            # Sidebar
+            html.Div(style={"width": "20%", "display": "inline-block", "verticalAlign": "top", "paddingRight": "20px"}, children=[
+                html.Div(className="graph-card", style={"padding": "20px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"}, children=[
+                    html.H3("Select Basin", style={"color": THEME_COLOR, "fontSize": "1.2rem", "fontWeight": "600"}),
+                    html.Label("Choose from list:", style={"fontWeight": "bold", "marginBottom": "5px", "color": "#555"}),
+                    dcc.Dropdown(
+                        id="basin-dropdown",
+                        options=basin_options,
+                        value=None,
+                        placeholder="Select a basin...",
+                        style={"marginBottom": "20px"},
+                        persistence=True,
+                        persistence_type="session"
+                    ),
 
-                            html.Div([
-                                    dcc.Graph(id="basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"})
-                            ], style={"width": "68%", "display": "inline-block", "marginLeft": "2%", "verticalAlign": "top", "boxShadow": "0 4px 12px rgba(0,0,0,0.1)", "borderRadius": "8px"})
-                        ])
-                    ])
-                ]
-            ),
-            html.Div(id="dynamic-content")
+                    html.Hr(),
+
+                    html.H3("Select Year Range", style={"color": THEME_COLOR, "fontSize": "1.2rem", "fontWeight": "600", "marginTop": "20px"}),
+                    html.Label("Start Year", style={"fontWeight": "bold", "marginBottom": "5px", "color": "#555"}),
+                    dcc.Dropdown(id="global-start-year-dropdown", style={"marginBottom": "10px"}),
+
+                    html.Label("End Year", style={"fontWeight": "bold", "marginBottom": "5px", "color": "#555"}),
+                    dcc.Dropdown(id="global-end-year-dropdown", style={"marginBottom": "10px"}),
+                ])
+            ]),
+
+            # Main Content
+            html.Div(style={"width": "78%", "display": "inline-block", "verticalAlign": "top"}, children=[
+                html.Div(id="dynamic-content")
+            ])
         ])
 
     return html.Div("404")
@@ -1153,20 +1157,28 @@ def get_year_options(basin):
 
 
 @app.callback(
+    [Output("global-start-year-dropdown", "options"),
+     Output("global-start-year-dropdown", "value"),
+     Output("global-end-year-dropdown", "options"),
+     Output("global-end-year-dropdown", "value")],
+    [Input("basin-dropdown", "value")]
+)
+def update_year_selectors(basin):
+    if not basin or basin == "none" or basin == "all":
+        return [], None, [], None
+
+    opts, start, end = get_year_options(basin)
+    return opts, start, opts, end
+
+@app.callback(
     Output("dynamic-content", "children"),
     [Input("basin-dropdown", "value")]
 )
 def render_basin_content(basin):
     if not basin or basin == "none" or basin == "all":
-        return html.Div(
-            style={"padding": "80px", "textAlign": "center", "color": "#64748b"},
-            children=[html.H3("Please select a basin above to view the analysis.", style={"color": THEME_COLOR})]
-        )
-
-    # Get years
-    opts, start, end = get_year_options(basin)
-    default_start = start
-    default_end = end
+        return html.Div(className="graph-card", style={"padding": "10px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"}, children=[
+             dcc.Graph(id="basin-map", style={"height": "600px", "borderRadius": "8px"})
+        ])
 
     content = []
 
@@ -1177,22 +1189,6 @@ def render_basin_content(basin):
 
     # 2. Climate & Results with Year Selection
     content.append(html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "marginTop": "30px"}, children=[
-
-        # Global Settings for Climate/Results
-        html.Div(style={"backgroundColor": "#f8fafc", "padding": "25px", "borderRadius": "8px", "marginBottom": "40px", "borderLeft": f"5px solid {THEME_COLOR}"}, children=[
-            html.H4("Analysis Settings (For Climate & Results)", style={"marginTop": "0", "color": THEME_COLOR, "marginBottom": "15px"}),
-            html.Div([
-                html.Div([
-                    html.Label("Start Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
-                    dcc.Dropdown(id="global-start-year-dropdown", options=opts, value=default_start, clearable=False, style={"backgroundColor": "white"})
-                ], style={"width": "200px", "display": "inline-block", "marginRight": "30px"}),
-                html.Div([
-                    html.Label("End Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
-                    dcc.Dropdown(id="global-end-year-dropdown", options=opts, value=default_end, clearable=False, style={"backgroundColor": "white"})
-                ], style={"width": "200px", "display": "inline-block"})
-            ])
-        ]),
-
         # Sections that depend on Year Selection
         get_climate_inputs_layout(basin),
         get_results_layout(basin)
