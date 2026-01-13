@@ -139,10 +139,6 @@ def read_basin_text(basin_name: str, filename: str) -> str:
 
     return f"No text available for {filename}."
 
-def read_text_section(basin_name: str, section: str) -> str:
-    """Legacy wrapper for specific text sections."""
-    return read_basin_text(basin_name, f"{section}.txt")
-
 def find_yearly_csv(basin_name: str, year: int):
     """Find yearly CSV file for a basin and year."""
     results_dir = os.path.join(BASIN_DIR, basin_name, "Results", "yearly")
@@ -295,26 +291,6 @@ def get_indicators(basin_name: str, start_year: int, end_year: int):
     agg_df = pd.merge(agg_df, meta_df, on='INDICATOR', how='left')
 
     return agg_df
-
-# ======================
-# VALIDATION UTILITIES
-# ======================
-
-def get_validation_data(basin_name: str, var_type: str):
-    """Get validation data for rainfall or ET."""
-    filename = "rainfall_validation.csv" if var_type == "P" else "et_validation.csv"
-    filepath = os.path.join(BASIN_DIR, basin_name, "Results", "validation", filename)
-
-    if not os.path.exists(filepath):
-        return pd.DataFrame()
-
-    try:
-        df = pd.read_csv(filepath, sep=';')
-        return df
-    except Exception as e:
-        print(f"Error reading validation data: {e}")
-        return pd.DataFrame()
-
 
 # ===================
 # SHAPEFILE UTILITIES
@@ -965,66 +941,107 @@ def get_land_use_table(basin):
         )
     return table_component
 
-def get_climate_inputs_layout(basin):
-    """Generates Precipitation, ET, and Validation sections."""
+def get_modern_analysis_layout(basin):
+    """
+    Generates the modern, interactive layout for the WA+ Analysis tab.
+    Includes Overview, Land Use, Climate (Tabs), and WA+ Reports.
+    Excludes Validation and Documentation as per new requirements.
+    """
+    if not basin or basin == "none":
+        return html.Div()
+
     return html.Div([
-        # Precipitation Subsection
-        html.H4("Precipitation", style={"color": THEME_COLOR, "marginTop": "40px", "fontSize": "1.5rem"}),
-        html.Div([
-            html.Div(dcc.Loading(dcc.Graph(id="p-map-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-            html.Div(dcc.Loading(dcc.Graph(id="p-bar-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "float": "right", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
+        # 1. Basin Overview Section
+        html.H3("Basin Overview", className="text-primary mb-3", style={"color": THEME_COLOR}),
+        dcc.Loading(html.Div(id="basin-overview-content"), type="circle"),
+
+        html.Hr(className="my-4"),
+
+        # 2. Land Use Analysis Section
+        html.H3("Land Use Analysis", className="text-primary mb-3", style={"color": THEME_COLOR}),
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("Land Use Map", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                    dbc.CardBody(
+                        dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "500px"}), type="circle"),
+                        style={"padding": "0"}
+                    )
+                ], className="h-100 shadow-sm")
+            ], width=12, lg=7, className="mb-4 mb-lg-0"),
+
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                    dbc.CardBody([
+                        dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "300px"}), type="circle"),
+                        html.Div("Land Use Details", style={"fontWeight": "bold", "marginTop": "20px", "marginBottom": "10px", "color": "#666"}),
+                        html.Div(id="basin-lu-table-container", style={"maxHeight": "300px", "overflowY": "auto", "fontSize": "0.85rem"}),
+                        html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
+                    ])
+                ], className="h-100 shadow-sm")
+            ], width=12, lg=5)
+        ], className="mb-5"),
+
+        # 3. Climate & Water Balance Section
+        html.H3("Climate & Water Balance", className="text-primary mb-3", style={"color": THEME_COLOR}),
+        dbc.Tabs([
+            dbc.Tab(label="Precipitation", children=[
+                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                     dbc.Row([
+                        dbc.Col(dcc.Loading(dcc.Graph(id="p-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                        dbc.Col([
+                            dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"),
+                            html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                        ], width=12, lg=6)
+                     ])
+                ])
+            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+
+            dbc.Tab(label="Evapotranspiration", children=[
+                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                     dbc.Row([
+                        dbc.Col(dcc.Loading(dcc.Graph(id="et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                        dbc.Col([
+                            dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"),
+                            html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                        ], width=12, lg=6)
+                     ])
+                ])
+            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+
+            dbc.Tab(label="Water Balance (P-ET)", children=[
+                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                     dbc.Row([
+                        dbc.Col(dcc.Loading(dcc.Graph(id="p-et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                        dbc.Col([
+                            dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"),
+                            html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                        ], width=12, lg=6)
+                     ])
+                ])
+            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+        ], className="mb-5"),
+
+        # 4. WA+ Sheets Section
+        html.H3("Water Accounting Reports", className="text-primary mb-3", style={"color": THEME_COLOR}),
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                     dbc.CardHeader("Resource Base (Sankey)", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                     dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-resource-base-sankey"), type="circle"))
+                ], className="shadow-sm mb-4")
+            ], width=12, lg=6),
+            dbc.Col([
+                dbc.Card([
+                     dbc.CardHeader("Sectoral Consumption", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                     dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-sectoral-bar"), type="circle"))
+                ], className="shadow-sm mb-4")
+            ], width=12, lg=6)
         ]),
-        html.Div(id="p-explanation", className="graph-card", style={"marginTop":"10px"}),
+        html.Div(id="wa-indicators-container", className="mt-3")
 
-        # ET Subsection
-        html.H4("Evapotranspiration", style={"color": THEME_COLOR, "marginTop": "40px", "fontSize": "1.5rem"}),
-        html.Div([
-            html.Div(dcc.Loading(dcc.Graph(id="et-map-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-            html.Div(dcc.Loading(dcc.Graph(id="et-bar-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "float": "right", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-        ]),
-        html.Div(id="et-explanation", className="graph-card", style={"marginTop":"10px"}),
-
-        # Validation
-        html.H4("Data Validation", style={"color": THEME_COLOR, "marginTop": "40px", "fontSize": "1.5rem"}),
-         html.Div([
-             html.Div(dcc.Graph(id="val-p-scatter"), style={"width": "49%", "display": "inline-block", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-             html.Div(dcc.Graph(id="val-et-scatter"), style={"width": "49%", "display": "inline-block", "float": "right", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"})
-        ])
-    ], id="section-climate-inputs")
-
-
-def get_results_layout(basin):
-    return html.Div([
-        html.H3("Results", style={"color": THEME_COLOR, "marginTop": "40px", "borderBottom": f"2px solid {THEME_COLOR}", "paddingBottom": "10px"}),
-
-        # Overview
-        html.H4("Basin Overview", style={"color": THEME_COLOR, "fontSize": "1.5rem"}),
-        html.Div(id="basin-overview-content"),
-
-        # Water Balance
-        html.H4("Water Balance (P - ET)", style={"color": THEME_COLOR, "marginTop": "30px", "fontSize": "1.5rem"}),
-        html.Div([
-            html.Div(dcc.Loading(dcc.Graph(id="p-et-map-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-            html.Div(dcc.Loading(dcc.Graph(id="p-et-bar-graph"), type="circle"), style={"width": "49%", "display": "inline-block", "float": "right", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "borderRadius": "8px"}),
-        ]),
-        html.Div(id="p-et-explanation", className="graph-card", style={"marginTop":"10px"}),
-
-        # WA+ Sheets
-        html.H4("Water Accounting Reports", style={"color": THEME_COLOR, "marginTop": "30px", "fontSize": "1.5rem"}),
-        dcc.Loading(dcc.Graph(id="wa-resource-base-sankey"), type="circle"),
-        dcc.Loading(dcc.Graph(id="wa-sectoral-bar"), type="circle"),
-        html.Div(id="wa-indicators-container"), # Added container for indicators
-
-        # Reports Tabs
-        html.H4("Documentation", style={"color": THEME_COLOR, "marginTop": "40px", "fontSize": "1.5rem"}),
-        html.Div([
-            dcc.Tabs(id="inner-report-tabs", value="assumptions", vertical=True, children=[
-                dcc.Tab(label="Assumptions", value="assumptions", style={'color': THEME_COLOR}, selected_style={'fontWeight': 'bold', 'color': THEME_COLOR, 'borderLeft': f'3px solid {THEME_COLOR}'}),
-                dcc.Tab(label="Limitations", value="limitations", style={'color': THEME_COLOR}, selected_style={'fontWeight': 'bold', 'color': THEME_COLOR, 'borderLeft': f'3px solid {THEME_COLOR}'}),
-            ], style={"height": "300px", "width": "20%", "display": "inline-block", "verticalAlign": "top"}),
-            html.Div(id="report-content", style={"width": "75%", "display": "inline-block", "marginLeft": "2%", "padding": "25px", "backgroundColor": "white", "borderRadius": "8px", "boxShadow": "0 2px 8px rgba(0,0,0,0.05)", "border": "1px solid #eee"})
-        ])
-    ], id="section-results")
+    ], id="basin-analysis-content")
 
 # Define the app layout
 app.layout = html.Div([
@@ -1152,35 +1169,8 @@ def render_tab_content(active_tab):
                         ], width=12)
                     ], className="mb-4"),
 
-                    # Land Use Section
-                    dbc.Row([
-                        dbc.Col([
-                            html.H4("Land Use Map", style={"color": THEME_COLOR}),
-                            dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px", "borderRadius": "8px", "overflow": "hidden"}), type="circle"),
-                        ], width=12)
-                    ], className="mb-4"),
-
-                    dbc.Row([
-                        dbc.Col([
-                            dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle")
-                        ], width=12)
-                    ], className="mb-4"),
-
-                    # Land Use Table and Text
-                    dbc.Row([
-                        dbc.Col([
-                             html.Div(id="lu-text-container", style={"padding": "20px", "backgroundColor": "white", "borderRadius": "8px"}, children=[
-                                 html.H4("Land Use Details", style={"color": THEME_COLOR}),
-                                 dcc.Markdown(id="land-use-text", className="markdown-content", style={"textAlign": "justify"})
-                             ])
-                        ], width=12, lg=6),
-                        dbc.Col([
-                            html.Div(id="basin-lu-table-container", style={"overflowX": "auto"})
-                        ], width=12, lg=6)
-                    ], className="mb-4"),
-
-                    # Dynamic Content
-                    html.Div(id="dynamic-content")
+                    # Dynamic Content for Selected Basin
+                    html.Div(id="basin-analysis-content")
 
                 ], width=12, lg=9)
             ])
@@ -1289,27 +1279,14 @@ def update_year_controls(basin):
 
 
 @app.callback(
-    Output("dynamic-content", "children"),
+    Output("basin-analysis-content", "children"),
     [Input("basin-dropdown", "value")]
 )
-def render_basin_content(basin):
+def update_basin_analysis_content(basin):
     if not basin or basin == "none" or basin == "all":
         return html.Div()
 
-    # Climate & Results
-    return html.Div(className="graph-card", style={"padding": "30px", "backgroundColor": "white", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "marginTop": "30px"}, children=[
-        # Sections that depend on Year Selection
-        get_climate_inputs_layout(basin),
-        get_results_layout(basin)
-    ])
-
-@app.callback(
-    Output("report-content", "children"),
-    [Input("inner-report-tabs", "value"), Input("basin-dropdown", "value")]
-)
-def update_inner_report(tab, basin):
-    if not basin or basin == "none": return ""
-    return dcc.Markdown(read_text_section(basin, tab), className="markdown-content")
+    return get_modern_analysis_layout(basin)
 
 # --- DATA PROCESSING LOGIC & WRAPPERS ---
 
@@ -1550,21 +1527,6 @@ def update_wa_module(basin, start_year, end_year):
 
     return fig_sankey, fig_bar, html.Div("Indicators Placeholder")
 
-def update_validation_plots(basin):
-    if not basin or basin == "none": return _empty_fig(), _empty_fig()
-    p_df = get_validation_data(basin, "P")
-    et_df = get_validation_data(basin, "ET")
-
-    def sc(df, t):
-        if df.empty: return _empty_fig(f"No Data {t}")
-        fig = px.scatter(df, x='Observed', y='Satellite', title=t)
-        fig.update_traces(marker_color=THEME_COLOR)
-        fig.update_layout(plot_bgcolor='white', font=dict(family="Segoe UI"))
-        return fig
-
-    return sc(p_df, "P Validation"), sc(et_df, "ET Validation")
-
-
 # --- WRAPPER CALLBACKS ---
 
 @app.callback(
@@ -1613,12 +1575,6 @@ def update_lu_bar_wrapper(basin):
 def update_wa_wrapper(basin, start, end):
     return update_wa_module(basin, start, end)
 
-@app.callback(
-    [Output("val-p-scatter", "figure"), Output("val-et-scatter", "figure")],
-    [Input("basin-dropdown", "value")]
-)
-def update_val_wrapper(basin):
-    return update_validation_plots(basin)
 
 @app.callback(
     Output("study-area-text", "children"),
