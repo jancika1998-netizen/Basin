@@ -575,7 +575,7 @@ def make_basin_selector_map(selected_basin=None) -> go.Figure:
     ch = go.Choroplethmapbox(
         geojson=gj, locations=locations, featureidkey="properties.basin", z=z_vals,
         colorscale=[[0, "rgba(43, 88, 122, 0.4)"], [1, "rgba(43, 88, 122, 0.4)"]], # Theme color with alpha
-        marker=dict(line=dict(width=3 if selected_basin and selected_basin != "all" else 1.8, color=THEME_COLOR)),
+        marker=dict(line=dict(width=4 if selected_basin and selected_basin != "all" else 2, color="black")),
         hovertemplate="%{location}<extra></extra>", showscale=False,
     )
     fig = go.Figure(ch)
@@ -842,9 +842,9 @@ def get_land_use_table(basin):
             columns=[
                 {'name': 'Water Management Class', 'id': 'Class'},
                 {'name': 'Land and water use', 'id': 'Subclass'},
-                {'name': 'Area (km2)', 'id': 'Area_Sub_km2'},
-                {'name': 'Area (km2)', 'id': 'Area_Class_km2'},
-                {'name': 'Area (%)', 'id': 'Area_Pct'},
+                {'name': 'Subclass Area (km²)', 'id': 'Area_Sub_km2'},
+                {'name': 'Class Total Area (km²)', 'id': 'Area_Class_km2'},
+                {'name': 'Class Area (%)', 'id': 'Area_Pct'},
                 {'name': 'P (mm)', 'id': 'P'},
                 {'name': 'ET (mm)', 'id': 'ET'},
                 {'name': 'P-ET (mm)', 'id': 'P_ET'},
@@ -973,9 +973,10 @@ def render_tab_content(active_tab):
 
     elif active_tab == "tab-analysis":
         return dbc.Container([
-            # --- Row 1: Controls (Compact) ---
             dbc.Row([
+                # --- Sidebar (Left) ---
                 dbc.Col([
+                    html.H4("Controls", style={"color": THEME_COLOR, "marginBottom": "15px"}),
                     html.Label("Select Basin", style={"fontWeight": "bold", "color": THEME_COLOR}),
                     dcc.Dropdown(
                         id="basin-dropdown",
@@ -986,64 +987,71 @@ def render_tab_content(active_tab):
                         persistence=True,
                         persistence_type="session"
                     ),
-                ], width=3),
-                dbc.Col([
-                    # Year Selection Panel - visible only when basin selected
+                    html.Br(),
+                    # Year Selection Panel
                     html.Div(id="year-selection-panel", style={"display": "none"}, children=[
                          dbc.Row([
                             dbc.Col([
                                 html.Label("Start Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
                                 dcc.Dropdown(id="global-start-year-dropdown", clearable=False, style={"borderRadius": "4px"}),
-                            ], width=6),
+                            ], width=12),
                             dbc.Col([
                                 html.Label("End Year", style={"fontWeight": "bold", "color": "#2c3e50"}),
                                 dcc.Dropdown(id="global-end-year-dropdown", clearable=False, style={"borderRadius": "4px"})
-                            ], width=6)
+                            ], width=12)
                         ])
                     ]),
-                ], width=9, style={"display": "flex", "alignItems": "flex-end"})
-            ], style={"marginBottom": "20px", "alignItems": "flex-end"}),
-
-            # --- Row 2: Study Area (Text + OSM Map) ---
-            dbc.Row([
-                dbc.Col([
-                    html.Div(id="study-area-container", style={"padding": "20px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}", "height": "100%"}, children=[
-                        html.H4("Study Area", style={"color": THEME_COLOR, "fontSize": "1.2rem"}),
-                        dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.9rem"})
+                    html.Hr(),
+                     # Study Area Text
+                    html.Div(id="study-area-container", style={"padding": "10px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}"}, children=[
+                        html.H4("Study Area", style={"color": THEME_COLOR, "fontSize": "1.1rem"}),
+                        dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.85rem"})
                     ])
-                ], width=6, style={"display": "flex", "flexDirection": "column"}),
-                dbc.Col([
-                     dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
-                ], width=6, style={"display": "flex", "alignItems": "center"})
-            ], style={"marginBottom": "30px", "alignItems": "stretch"}),
+                ], width=12, lg=3, className="mb-4 mb-lg-0", style={"backgroundColor": "white", "padding": "20px", "borderRadius": "8px", "boxShadow": "0 2px 4px rgba(0,0,0,0.05)"}),
 
-            # --- Row 3: Land Use Map + Bar Chart ---
-            dbc.Row([
+                # --- Main Content (Right) ---
                 dbc.Col([
-                    dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px", "borderRadius": "8px", "overflow": "hidden"}), type="circle"),
-                ], width=9),
-                dbc.Col([
-                    dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "300px"}), type="circle")
-                ], width=3, style={"display": "flex", "alignItems": "center"})
-            ], style={"marginBottom": "30px", "alignItems": "center"}),
+                    # Study Area Map (Top)
+                    dbc.Row([
+                        dbc.Col([
+                             html.H4("Study Area Map", style={"color": THEME_COLOR}),
+                             dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "400px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
+                        ], width=12)
+                    ], className="mb-4"),
 
-             # --- Row 4: Land Use Text + Table ---
-            dbc.Row([
-                dbc.Col([
-                     html.Div(id="lu-text-container", style={"padding": "20px", "backgroundColor": "white", "borderRadius": "8px"}, children=[
-                         html.H4("Land Use Details", style={"color": THEME_COLOR}),
-                         dcc.Markdown(id="land-use-text", className="markdown-content", style={"textAlign": "justify"})
-                     ])
-                ], width=6),
-                dbc.Col([
-                    html.Div(id="basin-lu-table-container", style={"overflowX": "auto"})
-                ], width=6, style={"display": "flex", "alignItems": "center"})
-            ], style={"marginBottom": "30px", "alignItems": "start"}),
+                    # Land Use Section
+                    dbc.Row([
+                        dbc.Col([
+                            html.H4("Land Use Map", style={"color": THEME_COLOR}),
+                            dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px", "borderRadius": "8px", "overflow": "hidden"}), type="circle"),
+                        ], width=12)
+                    ], className="mb-4"),
 
-            # --- Row 5: Dynamic Content (Climate, Results) ---
-            html.Div(id="dynamic-content")
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle")
+                        ], width=12)
+                    ], className="mb-4"),
 
-        ], fluid=False, style={"maxWidth": "1200px", "paddingTop": "20px"})
+                    # Land Use Table and Text
+                    dbc.Row([
+                        dbc.Col([
+                             html.Div(id="lu-text-container", style={"padding": "20px", "backgroundColor": "white", "borderRadius": "8px"}, children=[
+                                 html.H4("Land Use Details", style={"color": THEME_COLOR}),
+                                 dcc.Markdown(id="land-use-text", className="markdown-content", style={"textAlign": "justify"})
+                             ])
+                        ], width=12, lg=6),
+                        dbc.Col([
+                            html.Div(id="basin-lu-table-container", style={"overflowX": "auto"})
+                        ], width=12, lg=6)
+                    ], className="mb-4"),
+
+                    # Dynamic Content
+                    html.Div(id="dynamic-content")
+
+                ], width=12, lg=9)
+            ])
+        ], fluid=True, style={"paddingTop": "20px"})
 
     return html.Div("404")
 
