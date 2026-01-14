@@ -403,3 +403,25 @@ body {
     color: rgba(255,255,255,0.5);
     font-size: 0.9rem;
 }
+
+/* Header Tabs Overrides */
+.header-tabs {
+    border-bottom: none !important;
+}
+
+.header-tabs .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: 600;
+}
+
+.header-tabs .nav-link:hover {
+    color: var(--white) !important;
+    border-color: transparent !important;
+}
+
+.header-tabs .nav-link.active {
+    color: var(--white) !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    border-bottom: 3px solid var(--white) !important;
+}
