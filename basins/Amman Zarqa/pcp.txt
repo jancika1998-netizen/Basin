@@ -1,0 +1,1 @@
+**Precipitation ({start_year}–{end_year}):** Average monthly P is **{mean:.2f} mm**. Peak in **{max_month}** (**{max:.2f} mm**), lowest in **{min_month}** (**{min:.2f} mm**).

@@ -1044,10 +1044,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="p-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
@@ -1056,10 +1056,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
@@ -1068,10 +1068,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="p-et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
@@ -1332,6 +1332,29 @@ def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int
     max_month = months[np.nanargmax(y_vals)]
     min_month = months[np.nanargmin(y_vals)]
     
+    filename = None
+    if vtype == "P": filename = "pcp.txt"
+    elif vtype == "ET": filename = "et.txt"
+    elif vtype == "P-ET": filename = "pet.txt"
+
+    if filename:
+        raw_text = read_basin_text(basin, filename)
+        if raw_text and "No text available" not in raw_text:
+            try:
+                # Use .format() to inject values into the template
+                return raw_text.format(
+                    mean=mean_val,
+                    max=max_val,
+                    min=min_val,
+                    max_month=max_month,
+                    min_month=min_month,
+                    start_year=start_year,
+                    end_year=end_year
+                )
+            except Exception as e:
+                print(f"Error formatting text for {filename}: {e}")
+
+    # Fallback if file not found or formatting failed
     if vtype == "P":
         return (f"**Precipitation ({start_year}–{end_year}):** Average monthly P is **{mean_val:.2f} mm**. "
                 f"Peak in **{max_month}** (**{max_val:.2f} mm**), lowest in **{min_month}**.")
@@ -1655,19 +1678,163 @@ def update_land_use_text(basin, start_year, end_year):
         
     return generate_land_use_text(basin, start_year, end_year)
 
+def get_land_use_category(val):
+    if ((val >= 1) and (val <= 32)) or (val == 45):
+        return "Natural"
+    elif ((val >= 33) and (val <= 44)) or ((val >= 52) and (val <= 65)):
+        return "Agricultural"
+    elif ((val >= 46) and (val <= 51)) or ((val >= 66) and (val <= 80)):
+        return "Urban"
+    return "Other"
+
+def generate_land_use_stats(basin, start_year, end_year):
+    if not start_year or not end_year:
+        return []
+
+    da_lu, _, _ = load_and_process_data(basin, "LU", start_year, end_year)
+    da_p, _, _ = load_and_process_data(basin, "P", start_year, end_year)
+    da_et, _, _ = load_and_process_data(basin, "ET", start_year, end_year)
+
+    if da_lu is None or da_p is None or da_et is None:
+        return []
+
+    # Align P and ET (intersection of coordinates)
+    da_p, da_et = xr.align(da_p, da_et, join="inner")
+
+    # Interpolate LU to match P's grid geometry exactly
+    # This ensures da_lu has the same dimensions/coordinates as da_p
+    try:
+        da_lu = da_lu.interp_like(da_p, method="nearest")
+    except Exception as e:
+        print(f"Error aligning Land Use data: {e}")
+        return []
+
+    # Verify shapes match
+    if da_lu.shape != da_p.shape:
+        print("Shape mismatch after alignment.")
+        return []
+
+    vals_lu = da_lu.values.flatten()
+    vals_p = da_p.values.flatten()
+    vals_et = da_et.values.flatten()
+
+    mask = ~np.isnan(vals_lu) & ~np.isnan(vals_p) & ~np.isnan(vals_et)
+    vals_lu = vals_lu[mask]
+    vals_p = vals_p[mask]
+    vals_et = vals_et[mask]
+
+    unique_lu = np.unique(vals_lu)
+
+    rows = []
+    for lu_code in unique_lu:
+        lu_code = int(lu_code)
+        sub_mask = (vals_lu == lu_code)
+        area_pixels = np.sum(sub_mask)
+        if area_pixels == 0: continue
+
+        mean_p = np.mean(vals_p[sub_mask])
+        mean_et = np.mean(vals_et[sub_mask])
+        mean_pet = mean_p - mean_et
+
+        cat = get_land_use_category(lu_code)
+        name = class_info.get(lu_code, {}).get("name", str(lu_code))
+
+        rows.append({
+            "Category": cat,
+            "Subclass": name,
+            "Area_km2": float(area_pixels),
+            "P": mean_p,
+            "ET": mean_et,
+            "P_ET": mean_pet
+        })
+
+    if not rows: return []
+
+    df = pd.DataFrame(rows)
+
+    # Aggregates
+    cat_agg = df.groupby("Category")["Area_km2"].sum()
+    total_area = df["Area_km2"].sum()
+
+    cat_order = {"Natural": 1, "Agricultural": 2, "Urban": 3, "Other": 4}
+    df["CatOrder"] = df["Category"].map(cat_order).fillna(99)
+
+    # Sorting: Category order, then Area descending
+    df = df.sort_values(["CatOrder", "Area_km2"], ascending=[True, False])
+
+    grouped = collections.defaultdict(list)
+    for _, row in df.iterrows():
+        grouped[row["Category"]].append(row)
+
+    sorted_cats = sorted(grouped.keys(), key=lambda x: cat_order.get(x, 99))
+
+    structured_data = []
+    for cat in sorted_cats:
+        cat_rows = grouped[cat]
+        cat_total_area = cat_agg[cat]
+        cat_pct = (cat_total_area / total_area) * 100
+
+        for i, r in enumerate(cat_rows):
+            item = r.to_dict()
+            item["Cat_Total_Area"] = cat_total_area
+            item["Cat_Pct"] = cat_pct
+            item["Is_First"] = (i == 0)
+            item["Row_Span"] = len(cat_rows)
+            structured_data.append(item)
+
+    return structured_data
+
 @app.callback(
     Output("land-use-table-container", "children"),
-    [Input("basin-dropdown", "value")]
+    [Input("basin-dropdown", "value"),
+     Input("global-start-year-dropdown", "value"),
+     Input("global-end-year-dropdown", "value")]
 )
-def update_land_use_table(basin):
+def update_land_use_table(basin, start_year, end_year):
     if not basin or basin == "none":
         return ""
     
-    df = parse_lu_csv(basin)
-    if df.empty:
-        return html.Div("No Land Use details available.", style={"color": "#666"})
+    if not start_year or not end_year:
+        _, s, e = get_year_options(basin)
+        start_year = s
+        end_year = e
+
+    data = generate_land_use_stats(basin, start_year, end_year)
+
+    if not data:
+        return html.Div("No Land Use details available for selected range.", style={"color": "#666"})
+
+    header = html.Thead(html.Tr([
+        html.Th("Water Management Class"),
+        html.Th("Land and water use"),
+        html.Th("Area (km²)"),
+        html.Th("Area (km²)"),
+        html.Th("Area (%)"),
+        html.Th("P (mm)"),
+        html.Th("ET (mm)"),
+        html.Th("P-ET (mm)")
+    ]))
+
+    rows = []
+    for item in data:
+        cells = []
+        if item["Is_First"]:
+            cells.append(html.Td(item["Category"], rowSpan=item["Row_Span"], style={"verticalAlign": "middle", "fontWeight": "bold", "backgroundColor": "#f9f9f9"}))
+
+        cells.append(html.Td(item["Subclass"]))
+        cells.append(html.Td(f"{item['Area_km2']:.2f}"))
+
+        if item["Is_First"]:
+            cells.append(html.Td(f"{item['Cat_Total_Area']:.1f}", rowSpan=item["Row_Span"], style={"verticalAlign": "middle", "fontWeight": "bold"}))
+            cells.append(html.Td(f"{item['Cat_Pct']:.0f}", rowSpan=item["Row_Span"], style={"verticalAlign": "middle", "fontWeight": "bold"}))
+
+        cells.append(html.Td(f"{item['P']:.1f}"))
+        cells.append(html.Td(f"{item['ET']:.1f}"))
+        cells.append(html.Td(f"{item['P_ET']:.1f}"))
+
+        rows.append(html.Tr(cells))
     
-    return dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True, responsive=True, style={"fontSize": "0.85rem"})
+    return dbc.Table([header, html.Tbody(rows)], bordered=True, striped=False, hover=True, responsive=True, style={"fontSize": "0.9rem"})
 
 @app.callback(
     Output("intro-search-results", "children"),
