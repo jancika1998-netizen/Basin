@@ -1044,10 +1044,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="p-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
@@ -1056,10 +1056,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
@@ -1068,10 +1068,10 @@ def get_modern_analysis_layout():
                     html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
                          dbc.Row([
                             dbc.Col(dcc.Loading(dcc.Graph(id="p-et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                            dbc.Col([
-                                dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"),
-                                html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                            ], width=12, lg=6)
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"), width=12, lg=6)
+                         ]),
+                         dbc.Row([
+                             dbc.Col(html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small"), width=12)
                          ])
                     ])
                 ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
