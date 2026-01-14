@@ -1325,46 +1325,116 @@ def update_basin_overview(basin, start_year, end_year):
     except Exception as e:
         return html.Div(f"Error: {e}"), html.Div()
 
-def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int, y_vals: np.ndarray, months: list):
-    mean_val = np.nanmean(y_vals)
-    max_val = np.nanmax(y_vals)
-    min_val = np.nanmin(y_vals)
-    max_month = months[np.nanargmax(y_vals)]
-    min_month = months[np.nanargmin(y_vals)]
+def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int, da_ts: xr.DataArray):
+    if da_ts is None:
+        return "Data not available."
     
-    filename = None
-    if vtype == "P": filename = "pcp.txt"
-    elif vtype == "ET": filename = "et.txt"
-    elif vtype == "P-ET": filename = "pet.txt"
+    # Check if monthly (size of time dim >= number of years * 12)
+    # If so, we can do seasonality and annual aggregation
+    years_count = end_year - start_year + 1
+    time_size = da_ts.sizes.get('time', 0)
+    is_monthly = time_size >= years_count * 12
 
-    if filename:
-        raw_text = read_basin_text(basin, filename)
-        if raw_text and "No text available" not in raw_text:
-            try:
-                # Use .format() to inject values into the template
-                return raw_text.format(
-                    mean=mean_val,
-                    max=max_val,
-                    min=min_val,
-                    max_month=max_month,
-                    min_month=min_month,
-                    start_year=start_year,
-                    end_year=end_year
-                )
-            except Exception as e:
-                print(f"Error formatting text for {filename}: {e}")
+    # --- 1. Annual Map & Spatial Analysis ---
+    if is_monthly:
+        # Sum monthly to get annual totals (mm/year)
+        # Note: resample().sum() gives (years, lat, lon). .mean(dim="time") gives avg annual map (lat, lon)
+        annual_map = da_ts.resample(time="YE").sum(dim="time").mean(dim="time")
+    else:
+        # Assume it's already annual or just take mean
+        annual_map = da_ts.mean(dim="time")
 
-    # Fallback if file not found or formatting failed
-    if vtype == "P":
-        return (f"**Precipitation ({start_year}–{end_year}):** Average monthly P is **{mean_val:.2f} mm**. "
-                f"Peak in **{max_month}** (**{max_val:.2f} mm**), lowest in **{min_month}**.")
-    elif vtype == "ET":
-        return (f"**Evapotranspiration ({start_year}–{end_year}):** Average monthly ET is **{mean_val:.2f} mm**. "
-                f"Peak in **{max_month}** (**{max_val:.2f} mm**).")
-    elif vtype == "P-ET":
-        return (f"**Water Balance ({start_year}–{end_year}):** Average monthly P-ET is **{mean_val:.2f} mm**. "
-                f"Max surplus in **{max_month}**, max deficit in **{min_month}**.")
-    return ""
+    # West vs East
+    lons = annual_map.longitude.values
+    mid_lon = (lons.min() + lons.max()) / 2
+
+    west_mask = annual_map.longitude < mid_lon
+    east_mask = annual_map.longitude >= mid_lon
+
+    west_vals = annual_map.where(west_mask).values.flatten()
+    east_vals = annual_map.where(east_mask).values.flatten()
+
+    west_vals = west_vals[~np.isnan(west_vals)]
+    east_vals = east_vals[~np.isnan(east_vals)]
+
+    west_mean = np.mean(west_vals) if west_vals.size > 0 else 0
+    east_mean = np.mean(east_vals) if east_vals.size > 0 else 0
+
+    if west_mean > east_mean:
+        high_loc, low_loc = "western", "eastern"
+        high_vals = west_vals
+    else:
+        high_loc, low_loc = "eastern", "western"
+        high_vals = east_vals
+
+    # Range (75th - 95th percentile of the higher region to represent "higher values")
+    if high_vals.size > 0:
+        p75 = np.percentile(high_vals, 75)
+        p95 = np.percentile(high_vals, 95)
+        range_str = f"{p75:.0f}-{p95:.0f}"
+    else:
+        range_str = "N/A"
+
+    label = vtype
+    if vtype == "P": label = "rainfall"
+    if vtype == "P-ET": label = "water balance"
+
+    spatial_text = (f"The spatial distribution of {label} indicates higher values ({range_str} mm/year) "
+                    f"in the {high_loc} part of the basin and lower values in the {low_loc} portion of the basin.")
+
+
+    # --- 2. Temporal Analysis (Inter-annual) ---
+    if is_monthly:
+        # Basin-wide annual time series
+        # Ideally: Mean over space (mm/month) -> Sum over time (mm/year).
+        basin_monthly = da_ts.mean(dim=["latitude", "longitude"], skipna=True)
+        basin_annual = basin_monthly.resample(time="YE").sum()
+    else:
+        basin_annual = da_ts.mean(dim=["latitude", "longitude"], skipna=True)
+
+    years = basin_annual.time.dt.year.values
+    vals = basin_annual.values
+    long_term_avg = np.nanmean(vals)
+
+    below_years = sorted(years[vals < long_term_avg])
+    above_years = sorted(years[vals >= long_term_avg])
+
+    def fmt_yrs(ylist):
+        if not len(ylist): return "no years"
+        if len(ylist) == 1: return str(ylist[0])
+        return ", ".join(str(y) for y in ylist[:-1]) + " and " + str(ylist[-1])
+
+    temporal_text = (f"For the period {start_year}-{end_year}, {label} has primarily been a mix of "
+                     f"below average (<{long_term_avg:.0f} mm) years ({fmt_yrs(below_years)}) and "
+                     f"above average (>{long_term_avg:.0f} mm) years ({fmt_yrs(above_years)}).")
+
+
+    # --- 3. Seasonality ---
+    seasonality_text = ""
+    if is_monthly:
+        monthly_clim = da_ts.mean(dim=["latitude", "longitude"], skipna=True).groupby("time.month").mean()
+        # Sort values
+        m_vals = monthly_clim.values
+        m_indices = np.argsort(m_vals) # Low to High
+
+        # Top 3 months
+        top3_idx = m_indices[-3:][::-1] # High to Low
+        low3_idx = m_indices[:3] # Low to High
+
+        import calendar
+        month_names = [calendar.month_name[i] for i in range(1, 13)]
+
+        high_months_str = ", ".join([month_names[monthly_clim.month.values[i]-1] for i in top3_idx])
+        high_range = f"{m_vals[top3_idx[-1]]:.0f}-{m_vals[top3_idx[0]]:.0f}"
+
+        low_months_str = ", ".join([month_names[monthly_clim.month.values[i]-1] for i in low3_idx])
+
+        seasonality_text = (f"The largest {label} amounts typically occur in {high_months_str} ({high_range} mm/month) "
+                            f"and the lowest values occur in {low_months_str}.")
+
+    # Combine
+    full_text = f"{spatial_text} {temporal_text} {seasonality_text}"
+    return full_text
 
 def _hydro_figs(basin: str, start_year: int | None, end_year: int | None, vtype: str):
     if not basin or basin == "none": return _empty_fig(), _empty_fig(), ""
@@ -1392,10 +1462,10 @@ def _hydro_figs(basin: str, start_year: int | None, end_year: int | None, vtype:
         fig_bar = px.bar(x=months, y=y_vals, title=f"Mean Monthly {vtype}")
         fig_bar.update_traces(marker_color=THEME_COLOR)
         fig_bar.update_layout(plot_bgcolor='white', font=dict(family="Segoe UI"))
-        explanation = _generate_explanation(vtype, basin, ys, ye, y_vals, months)
-    except:
+        explanation = _generate_explanation(vtype, basin, ys, ye, da_ts)
+    except Exception as e:
         fig_bar = _empty_fig("Data Error")
-        explanation = "Error"
+        explanation = f"Error generating description: {e}"
         
     return fig_map, fig_bar, dcc.Markdown(explanation, className="markdown-content")
 
@@ -1428,10 +1498,10 @@ def update_p_et_outputs(basin, start_year, end_year):
         fig_bar = px.bar(x=months, y=y_vals, title="Mean Monthly P-ET")
         fig_bar.update_traces(marker_color=THEME_COLOR)
         fig_bar.update_layout(plot_bgcolor='white', font=dict(family="Segoe UI"))
-        explanation = _generate_explanation("P-ET", basin, ys, ye, y_vals, months)
-    except:
+        explanation = _generate_explanation("P-ET", basin, ys, ye, da_pet)
+    except Exception as e:
         fig_bar = _empty_fig()
-        explanation = ""
+        explanation = f"Error generating description: {e}"
     return fig_map, fig_bar, dcc.Markdown(explanation, className="markdown-content")
 
 def update_lu_map_and_coupling(basin):
