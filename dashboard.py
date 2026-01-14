@@ -911,43 +911,6 @@ def get_home_content():
         ]),
     ])
 
-def get_land_use_table(basin):
-    """Generates the Land Use Table component."""
-    # Table logic
-    table_component = html.Div("No table data available.")
-    if basin == "Amman Zarqa":
-        df = pd.DataFrame(LAND_USE_DATA)
-        table_component = dash_table.DataTable(
-            data=df.to_dict('records'),
-            columns=[
-                {'name': 'Water Management Class', 'id': 'Class'},
-                {'name': 'Land and water use', 'id': 'Subclass'},
-                {'name': 'Subclass Area (km²)', 'id': 'Area_Sub_km2'},
-                {'name': 'Class Total Area (km²)', 'id': 'Area_Class_km2'},
-                {'name': 'Class Area (%)', 'id': 'Area_Pct'},
-                {'name': 'P (mm)', 'id': 'P'},
-                {'name': 'ET (mm)', 'id': 'ET'},
-                {'name': 'P-ET (mm)', 'id': 'P_ET'},
-            ],
-            style_table={'overflowX': 'auto'},
-            style_cell={
-                'textAlign': 'left',
-                'padding': '12px',
-                'fontFamily': 'Segoe UI, sans-serif',
-                'border': '1px solid #e2e8f0',
-                'fontSize': '0.9rem'
-            },
-            style_header={
-                'backgroundColor': '#eff6ff', # Light blue
-                'fontWeight': 'bold',
-                'color': THEME_COLOR,
-                'border': '1px solid #e2e8f0'
-            },
-            style_data_conditional=[
-                 {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8fafc'}
-            ]
-        )
-    return table_component
 
 def get_modern_analysis_layout():
     """
@@ -987,131 +950,127 @@ def get_modern_analysis_layout():
             ], width=12, lg=4, className="mb-4 mb-lg-0"),
 
             dbc.Col([
-                 html.H4("Study Area Map", style={"color": THEME_COLOR}),
-                 dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "300px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
+                html.Div(id="map-content-container", style={"display": "none"}, children=[
+                     html.H4("Study Area Map", style={"color": THEME_COLOR}),
+                     dcc.Loading(dcc.Graph(id="osm-basin-map", style={"height": "300px", "borderRadius": "8px", "overflow": "hidden"}, config={"scrollZoom": True}), type="circle"),
+                ])
             ], width=12, lg=8)
         ], className="mb-4"),
 
-        # Row 2: Study Area Description (Full Width)
-        dbc.Row([
-            dbc.Col([
-                 html.Div(id="study-area-container", style={"padding": "10px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}"}, children=[
-                    html.H4("Study Area Description", style={"color": THEME_COLOR, "fontSize": "1.1rem"}),
-                    dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.95rem"})
-                ])
-            ])
-        ], className="mb-4"),
-
-        # Row 3: Basin Overview & Executive Summary (2 Columns)
-        dbc.Row([
-            dbc.Col([
-                 html.H3("Basin Overview", className="text-primary mb-3", style={"color": THEME_COLOR}),
-                 dcc.Loading(html.Div(id="basin-overview-metrics"), type="circle"),
-            ], width=12, lg=6),
-            dbc.Col([
-                 html.H3("Executive Summary", className="text-primary mb-3", style={"color": THEME_COLOR}),
-                 dcc.Loading(html.Div(id="basin-overview-summary"), type="circle"),
-            ], width=12, lg=6)
-        ], className="mb-4"),
-
-        # Row 4: Land Use Map (Full Width)
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader("Land Use Map", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
-                    dbc.CardBody(
-                        dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px"}), type="circle"), # Increased height
-                        style={"padding": "0"}
-                    )
-                ], className="h-100 shadow-sm")
-            ], width=12),
-        ], className="mb-4"),
-
-        # Row 5: Land Use Statistics (Full Width)
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
-                    dbc.CardBody([
-                        dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle"),
+        html.Div(id="main-content-container", style={"display": "none"}, children=[
+            # Row 2: Study Area Description (Full Width)
+            dbc.Row([
+                dbc.Col([
+                     html.Div(id="study-area-container", style={"padding": "10px", "backgroundColor": "#f8fafc", "borderRadius": "8px", "borderLeft": f"4px solid {THEME_COLOR}"}, children=[
+                        html.H4("Study Area Description", style={"color": THEME_COLOR, "fontSize": "1.1rem"}),
+                        dcc.Markdown(id="study-area-text", className="markdown-content", style={"textAlign": "justify", "fontSize": "0.95rem"})
                     ])
-                ], className="h-100 shadow-sm")
-            ], width=12)
-        ], className="mb-4"),
-
-        # Row 6: Land Use Details Table (Full Width)
-        dbc.Row([
-            dbc.Col([
-                 html.H3("Land Use Details", className="text-primary mb-3", style={"color": THEME_COLOR}),
-                 html.Div(id="basin-lu-table-container", style={"overflowY": "auto", "fontSize": "0.9rem"})
-            ])
-        ], className="mb-4"),
-
-        # Row 6: Land Use Description (Full Width)
-        dbc.Row([
-             dbc.Col([
-                html.H3("Land Use Description", className="text-primary mb-3", style={"color": THEME_COLOR}),
-                html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
-             ])
-        ], className="mb-5"),
-
-        # Supplementary Sections (Climate & Reports)
-        html.Hr(),
-        html.H3("Climate & Water Balance", className="text-primary mb-3", style={"color": THEME_COLOR}),
-        dbc.Tabs([
-            dbc.Tab(label="Precipitation", children=[
-                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
-                     dbc.Row([
-                        dbc.Col(dcc.Loading(dcc.Graph(id="p-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                        dbc.Col([
-                            dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"),
-                            html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                        ], width=12, lg=6)
-                     ])
                 ])
-            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+            ], className="mb-4"),
 
-            dbc.Tab(label="Evapotranspiration", children=[
-                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
-                     dbc.Row([
-                        dbc.Col(dcc.Loading(dcc.Graph(id="et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                        dbc.Col([
-                            dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"),
-                            html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                        ], width=12, lg=6)
-                     ])
-                ])
-            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+            # Row 3: Basin Overview & Executive Summary (2 Columns)
+            dbc.Row([
+                dbc.Col([
+                     html.H3("Basin Overview", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                     dcc.Loading(html.Div(id="basin-overview-metrics"), type="circle"),
+                ], width=12, lg=6),
+                dbc.Col([
+                     html.H3("Executive Summary", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                     dcc.Loading(html.Div(id="basin-overview-summary"), type="circle"),
+                ], width=12, lg=6)
+            ], className="mb-4"),
 
-            dbc.Tab(label="Water Balance (P-ET)", children=[
-                html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
-                     dbc.Row([
-                        dbc.Col(dcc.Loading(dcc.Graph(id="p-et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
-                        dbc.Col([
-                            dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"),
-                            html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
-                        ], width=12, lg=6)
-                     ])
-                ])
-            ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
-        ], className="mb-5"),
+            # Row 4: Land Use Map (Full Width)
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Land Use Map", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                        dbc.CardBody(
+                            dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px"}), type="circle"), # Increased height
+                            style={"padding": "0"}
+                        )
+                    ], className="h-100 shadow-sm")
+                ], width=12),
+            ], className="mb-4"),
 
-        html.H3("Water Accounting Reports", className="text-primary mb-3", style={"color": THEME_COLOR}),
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                     dbc.CardHeader("Resource Base (Sankey)", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
-                     dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-resource-base-sankey"), type="circle"))
-                ], className="shadow-sm mb-4")
-            ], width=12, lg=6),
-            dbc.Col([
-                dbc.Card([
-                     dbc.CardHeader("Sectoral Consumption", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
-                     dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-sectoral-bar"), type="circle"))
-                ], className="shadow-sm mb-4")
-            ], width=12, lg=6)
-        ]),
-        html.Div(id="wa-indicators-container", className="mt-3")
+            # Row 5: Land Use Statistics (Full Width)
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                        dbc.CardBody([
+                            dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle"),
+                        ])
+                    ], className="h-100 shadow-sm")
+                ], width=12)
+            ], className="mb-4"),
+
+            # Row 6: Land Use Description (Full Width)
+            dbc.Row([
+                 dbc.Col([
+                    html.H3("Land Use Description", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                    html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
+                 ])
+            ], className="mb-5"),
+
+            # Supplementary Sections (Climate & Reports)
+            html.Hr(),
+            html.H3("Climate & Water Balance", className="text-primary mb-3", style={"color": THEME_COLOR}),
+            dbc.Tabs([
+                dbc.Tab(label="Precipitation", children=[
+                    html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                         dbc.Row([
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                            dbc.Col([
+                                dcc.Loading(dcc.Graph(id="p-bar-graph", style={"height": "400px"}), type="circle"),
+                                html.Div(id="p-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                            ], width=12, lg=6)
+                         ])
+                    ])
+                ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+
+                dbc.Tab(label="Evapotranspiration", children=[
+                    html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                         dbc.Row([
+                            dbc.Col(dcc.Loading(dcc.Graph(id="et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                            dbc.Col([
+                                dcc.Loading(dcc.Graph(id="et-bar-graph", style={"height": "400px"}), type="circle"),
+                                html.Div(id="et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                            ], width=12, lg=6)
+                         ])
+                    ])
+                ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+
+                dbc.Tab(label="Water Balance (P-ET)", children=[
+                    html.Div(className="p-4 border-start border-bottom border-end rounded-bottom bg-white shadow-sm", children=[
+                         dbc.Row([
+                            dbc.Col(dcc.Loading(dcc.Graph(id="p-et-map-graph", style={"height": "400px"}), type="circle"), width=12, lg=6),
+                            dbc.Col([
+                                dcc.Loading(dcc.Graph(id="p-et-bar-graph", style={"height": "400px"}), type="circle"),
+                                html.Div(id="p-et-explanation", className="mt-3 p-3 bg-light rounded text-muted small")
+                            ], width=12, lg=6)
+                         ])
+                    ])
+                ], label_style={"color": THEME_COLOR, "fontWeight": "bold"}),
+            ], className="mb-5"),
+
+            html.H3("Water Accounting Reports", className="text-primary mb-3", style={"color": THEME_COLOR}),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                         dbc.CardHeader("Resource Base (Sankey)", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                         dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-resource-base-sankey"), type="circle"))
+                    ], className="shadow-sm mb-4")
+                ], width=12, lg=6),
+                dbc.Col([
+                    dbc.Card([
+                         dbc.CardHeader("Sectoral Consumption", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
+                         dbc.CardBody(dcc.Loading(dcc.Graph(id="wa-sectoral-bar"), type="circle"))
+                    ], className="shadow-sm mb-4")
+                ], width=12, lg=6)
+            ]),
+            html.Div(id="wa-indicators-container", className="mt-3")
+        ])
 
     ], fluid=True, style={"paddingTop": "20px"})
 
@@ -1215,13 +1174,14 @@ def update_land_use_map(basin):
     return fig
 
 @app.callback(
-    Output("basin-lu-table-container", "children"),
+    [Output("map-content-container", "style"),
+     Output("main-content-container", "style")],
     [Input("basin-dropdown", "value")]
 )
-def update_lu_table_callback(basin):
-    if not basin or basin == "none":
-        return html.Div()
-    return get_land_use_table(basin)
+def toggle_analysis_content_visibility(basin):
+    if basin and basin != "none":
+        return {"display": "block"}, {"display": "block"}
+    return {"display": "none"}, {"display": "none"}
 
 @app.callback(
     Output("basin-dropdown", "value"),
@@ -1488,9 +1448,10 @@ def update_lu_map_and_coupling(basin):
         font=dict(color="#1e293b"), margin=dict(l=50, r=50, t=60, b=50),
         legend=dict(
             title="Land Use Classes",
-            yanchor="top", y=1.02,
-            xanchor="left", x=1.02,
-            font=dict(size=10) # Smaller legend font
+            orientation="h",
+            yanchor="top", y=-0.2,
+            xanchor="center", x=0.5,
+            font=dict(size=10)
         )
     )
 
@@ -1511,13 +1472,14 @@ def update_lu_map_and_coupling(basin):
         # Assuming 1 pixel = 1 km2
         stats.append({"Class": name, "Area_km2": float(c)})
     df_stats = pd.DataFrame(stats).sort_values("Area_km2", ascending=False).head(4)
-    fig_bar = px.bar(df_stats, x="Class", y="Area_km2", title="Top 4 Land Use Classes by Area")
+    fig_bar = px.bar(df_stats, x="Class", y="Area_km2", title="Top 4 Land Use Classes by Area", text_auto='.2s')
     fig_bar.update_traces(marker_color=THEME_COLOR)
     fig_bar.update_layout(
         plot_bgcolor='white',
         font=dict(family="Segoe UI"),
         xaxis_title="Land Use Class",
-        yaxis_title="Area (km²)"
+        yaxis_title="Area (km²)",
+        bargap=0.5
     )
 
     return fig_map, fig_bar
