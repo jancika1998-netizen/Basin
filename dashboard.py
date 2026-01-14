@@ -834,29 +834,27 @@ def get_intro_charts():
     return fig_network, fig_bar
 
 def get_header():
-    return html.Div([
-        html.Nav(
-            className="navbar-custom",
-            style={"backgroundColor": THEME_COLOR, "padding": "15px 20px", "display": "flex", "alignItems": "center", "justifyContent": "space-between"},
-            children=[
-                html.Div(className="navbar-brand-group", style={"display": "flex", "alignItems": "center"}, children=[
-                    html.Img(src=app.get_asset_url('iwmi.png'), style={"height": "50px", "marginRight": "15px", "filter": "brightness(0) invert(1)"}),
-                    html.H1("Rapid Water Accounting - Jordan", style={"color": "white", "margin": 0, "fontSize": "1.5rem", "fontWeight": "600", "fontFamily": "Segoe UI, sans-serif"}),
-                ]),
-                html.Div(className="nav-links", style={"display": "flex", "alignItems": "center"}, children=[
-                    html.Img(src=app.get_asset_url('cgiar.png'), style={"height": "40px", "filter": "brightness(0) invert(1)"}),
+    return html.Nav(
+        className="navbar-custom",
+        style={"backgroundColor": THEME_COLOR, "padding": "0 20px", "display": "flex", "alignItems": "center", "justifyContent": "space-between"},
+        children=[
+            html.Div(className="navbar-brand-group", style={"display": "flex", "alignItems": "center", "padding": "10px 0"}, children=[
+                html.Img(src=app.get_asset_url('iwmi.png'), style={"height": "50px", "marginRight": "15px", "filter": "brightness(0) invert(1)"}),
+                html.H1("Rapid Water Accounting - Jordan", style={"color": "white", "margin": 0, "fontSize": "1.5rem", "fontWeight": "600", "fontFamily": "Segoe UI, sans-serif"}),
+            ]),
+            html.Div(style={"marginLeft": "40px"}, children=[
+                dbc.Tabs(id="main-tabs", active_tab="tab-home", className="header-tabs", children=[
+                    dbc.Tab(label="Home", tab_id="tab-home"),
+                    dbc.Tab(label="Introduction", tab_id="tab-intro"),
+                    dbc.Tab(label="Framework", tab_id="tab-framework"),
+                    dbc.Tab(label="WA+ Analysis", tab_id="tab-analysis"),
                 ])
-            ]
-        ),
-        html.Div(style={"backgroundColor": "white", "borderBottom": "1px solid #dee2e6"}, children=[
-            dbc.Tabs(id="main-tabs", active_tab="tab-home", style={"paddingLeft": "20px", "paddingRight": "20px"}, children=[
-                dbc.Tab(label="Home", tab_id="tab-home", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-                dbc.Tab(label="Introduction", tab_id="tab-intro", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-                dbc.Tab(label="Framework", tab_id="tab-framework", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
-                dbc.Tab(label="WA+ Analysis", tab_id="tab-analysis", label_style={"color": THEME_COLOR, "fontWeight": "600"}),
+            ]),
+            html.Div(className="nav-links", style={"display": "flex", "alignItems": "center"}, children=[
+                html.Img(src=app.get_asset_url('cgiar.png'), style={"height": "40px", "filter": "brightness(0) invert(1)"}),
             ])
-        ])
-    ])
+        ]
+    )
 
 def get_footer():
     return html.Footer(className="site-footer", style={"backgroundColor": THEME_COLOR, "color": "white", "padding": "40px 20px", "marginTop": "40px"}, children=[
@@ -894,18 +892,18 @@ def get_home_content():
         # Features Section
         html.Div(className="content-section", style={"maxWidth": "1200px", "margin": "0 auto", "padding": "0 20px"}, children=[
             html.Div(className="grid-3", style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(300px, 1fr))", "gap": "30px"}, children=[
-                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}"}, children=[
-                    html.Div("📊", style={"fontSize": "3rem", "marginBottom": "15px"}),
+                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}", "overflow": "hidden"}, children=[
+                    html.Img(src="https://images.unsplash.com/photo-1664577864712-3ead0e0c439d?fm=jpg&q=80&w=600", style={"width": "calc(100% + 60px)", "height": "200px", "objectFit": "cover", "margin": "-30px -30px 20px -30px"}),
                     html.H3("Basin Analysis", style={"color": THEME_COLOR, "fontWeight": "600", "marginBottom": "10px"}),
                     html.P("Interactive maps and metrics for major basins in Jordan. Analyze inflows, outflows, and storage changes.", style={"color": "#666", "lineHeight": "1.6"})
                 ]),
-                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}"}, children=[
-                    html.Div("🌧️", style={"fontSize": "3rem", "marginBottom": "15px"}),
+                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}", "overflow": "hidden"}, children=[
+                    html.Img(src="https://images.unsplash.com/photo-1630159385480-2f3ddbc307cd?fm=jpg&q=80&w=600", style={"width": "calc(100% + 60px)", "height": "200px", "objectFit": "cover", "margin": "-30px -30px 20px -30px"}),
                     html.H3("Climate Data", style={"color": THEME_COLOR, "fontWeight": "600", "marginBottom": "10px"}),
                     html.P("Visualize long-term precipitation and evapotranspiration trends derived from high-resolution satellite data.", style={"color": "#666", "lineHeight": "1.6"})
                 ]),
-                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}"}, children=[
-                    html.Div("📑", style={"fontSize": "3rem", "marginBottom": "15px"}),
+                html.Div(className="feature-card", style={"backgroundColor": "white", "padding": "30px", "borderRadius": "10px", "boxShadow": "0 4px 6px rgba(0,0,0,0.1)", "borderTop": f"5px solid {THEME_COLOR}", "overflow": "hidden"}, children=[
+                    html.Img(src="https://images.unsplash.com/photo-1666433611778-c5e72528151a?fm=jpg&q=80&w=600", style={"width": "calc(100% + 60px)", "height": "200px", "objectFit": "cover", "margin": "-30px -30px 20px -30px"}),
                     html.H3("WA+ Reporting", style={"color": THEME_COLOR, "fontWeight": "600", "marginBottom": "10px"}),
                     html.P("Standardized Water Accounting Plus (WA+) sheets and indicators to support evidence-based decision making.", style={"color": "#666", "lineHeight": "1.6"})
                 ])
