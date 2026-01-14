@@ -878,7 +878,7 @@ def get_home_content():
     return html.Div([
         # Hero Section
         html.Div(className="hero-section", style={
-            "backgroundImage": "linear-gradient(rgba(43, 88, 122, 0.7), rgba(43, 88, 122, 0.8)), url('https://images.unsplash.com/photo-1589923188900-85dae5233271?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')",
+            "backgroundImage": f"linear-gradient(rgba(43, 88, 122, 0.7), rgba(43, 88, 122, 0.8)), url('{app.get_asset_url('jordan_home.png')}')",
             "backgroundSize": "cover",
             "backgroundPosition": "center",
             "padding": "100px 20px",
