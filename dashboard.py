@@ -153,6 +153,27 @@ def find_yearly_csv(basin_name: str, year: int):
     
     return _first_existing(patterns)
 
+def parse_lu_csv(basin_name: str) -> pd.DataFrame:
+    """Parse lu.csv from basin folder."""
+    csv_path = os.path.join(BASIN_DIR, basin_name, "lu.csv")
+    if not os.path.exists(csv_path):
+        return pd.DataFrame()
+
+    try:
+        # Read with header
+        df = pd.read_csv(csv_path)
+        
+        # Forward fill the first column (Class)
+        df.iloc[:, 0] = df.iloc[:, 0].ffill()
+        
+        # Fill NaN with empty string for display
+        df = df.fillna("")
+        
+        return df
+    except Exception as e:
+        print(f"Error parsing lu.csv: {e}")
+        return pd.DataFrame()
+
 def parse_wa_sheet(csv_file: str):
     """Robust parsing of sheet1 CSV for WA+."""
     try:
@@ -980,37 +1001,39 @@ def get_modern_analysis_layout():
                 ], width=12, lg=6)
             ], className="mb-4"),
 
-            # Row 4: Land Use Map (Full Width)
+            # Row 4: Land Use Map and Statistics (Side-by-Side)
             dbc.Row([
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader("Land Use Map", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
                         dbc.CardBody(
-                            dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "600px"}), type="circle"), # Increased height
+                            dcc.Loading(dcc.Graph(id="land-use-map", style={"height": "500px"}), type="circle"),
                             style={"padding": "0"}
                         )
                     ], className="h-100 shadow-sm")
-                ], width=12),
-            ], className="mb-4"),
+                ], width=12, lg=8),
 
-            # Row 5: Land Use Statistics (Full Width)
-            dbc.Row([
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader("Land Use Statistics", style={"fontWeight": "bold", "backgroundColor": "#eff6ff"}),
                         dbc.CardBody([
-                            dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "400px"}), type="circle"),
+                            dcc.Loading(dcc.Graph(id="lu-bar-graph", style={"height": "500px"}), type="circle"),
                         ])
                     ], className="h-100 shadow-sm")
-                ], width=12)
+                ], width=12, lg=4)
             ], className="mb-4"),
 
-            # Row 6: Land Use Description (Full Width)
+            # Row 5: Land Use Description and Table (Side-by-Side)
             dbc.Row([
                  dbc.Col([
                     html.H3("Land Use Description", className="text-primary mb-3", style={"color": THEME_COLOR}),
                     html.Div(dcc.Markdown(id="land-use-text", className="markdown-content text-muted small mt-3"))
-                 ])
+                 ], width=12, lg=6),
+
+                 dbc.Col([
+                    html.H3("Land Use Details", className="text-primary mb-3", style={"color": THEME_COLOR}),
+                    dcc.Loading(html.Div(id="land-use-table-container"), type="circle")
+                 ], width=12, lg=6)
             ], className="mb-5"),
 
             # Supplementary Sections (Climate & Reports)
@@ -1442,14 +1465,14 @@ def update_lu_map_and_coupling(basin):
 
     fig_map.update_layout(
         title=dict(text="Land Use Map", x=0.5, xanchor='center'),
-        xaxis_title="Longitude", yaxis_title="Latitude",
-        yaxis=dict(scaleanchor="x", scaleratio=1),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1),
         plot_bgcolor='white', paper_bgcolor='white',
-        font=dict(color="#1e293b"), margin=dict(l=50, r=50, t=60, b=50),
+        font=dict(color="#1e293b"), margin=dict(l=0, r=0, t=30, b=50),
         legend=dict(
             title="Land Use Classes",
             orientation="h",
-            yanchor="top", y=-0.2,
+            yanchor="top", y=-0.1,
             xanchor="center", x=0.5,
             font=dict(size=10)
         )
@@ -1479,7 +1502,9 @@ def update_lu_map_and_coupling(basin):
         font=dict(family="Segoe UI"),
         xaxis_title="Land Use Class",
         yaxis_title="Area (km²)",
-        bargap=0.5
+        bargap=0.5,
+        yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+        xaxis=dict(showgrid=False)
     )
 
     return fig_map, fig_bar
@@ -1563,14 +1588,86 @@ def update_study_area_text(basin):
         text = read_basin_text(basin, "studyarea.txt")
     return text
 
+def generate_land_use_text(basin, start_year, end_year):
+    try:
+        da_lu, _, _ = load_and_process_data(basin, "LU", start_year, end_year)
+        if da_lu is None:
+            return f"Data not available for {basin}."
+        
+        values = da_lu.values.flatten()
+        values = values[~np.isnan(values)]
+        
+        if values.size == 0:
+            return f"No valid data for {basin}."
+            
+        total = values.size
+        values = values.astype(int)
+        
+        # Classification logic matching lu.csv grouping
+        # Natural: 1-32, 45
+        natural_mask = ((values >= 1) & (values <= 32)) | (values == 45)
+        # Agricultural: 33-44, 52-65
+        agri_mask = ((values >= 33) & (values <= 44)) | ((values >= 52) & (values <= 65))
+        # Urban: 46-51, 66-80
+        urban_mask = ((values >= 46) & (values <= 51)) | ((values >= 66) & (values <= 80))
+        # Irrigated: 54-62 (Subset of Agri)
+        irrigated_mask = (values >= 54) & (values <= 62)
+        
+        nat_pct = (np.sum(natural_mask) / total) * 100
+        agri_pct = (np.sum(agri_mask) / total) * 100
+        urb_pct = (np.sum(urban_mask) / total) * 100
+        irrigated_area = np.sum(irrigated_mask) # Assuming 1px = 1km2
+
+        sy = start_year if start_year else "Start"
+        ey = end_year if end_year else "End"
+
+        text = (
+            f"The WaPOR land use data for {sy}-{ey} was selected for water accounting. "
+            "Prior land use mapping done in the basin including irrigated areas by GIZ was not available at the time of this study so the globally available product WaPOR land use was used. "
+            "The WA+ land and water use categories were further simplified into 3 major land and water management classes:\n\n"
+            "1. **Natural landscapes**: these are land use classes where there is limited human intervention. These also include conservation zones.\n"
+            "2. **Agricultural landscape**: These are both rainfed and irrigated agricultural areas.\n"
+            "3. **Urban landscapes**: Areas of significant land modification which is not agricultural. These include paved surfaces, lots and roads.\n\n"
+            "The resulting map indicates different land and water use characteristics across the watershed. "
+            f"Land use in the **{basin}** is primarily natural landscape accounting for **{nat_pct:.0f}%** of the basin, "
+            f"agricultural land use comprises **{agri_pct:.0f}%** of the basin and urban landscapes occupy **{urb_pct:.0f}%** of the watershed. "
+            f"Of the agricultural landscape, majority is rainfed and only **{irrigated_area:.0f} km²** is observed to be irrigated agriculture."
+        )
+        return text
+    except Exception as e:
+        return f"Error generating text: {e}"
+
 @app.callback(
     Output("land-use-text", "children"),
-    [Input("basin-dropdown", "value")]
+    [Input("basin-dropdown", "value"),
+     Input("global-start-year-dropdown", "value"),
+     Input("global-end-year-dropdown", "value")]
 )
-def update_land_use_text(basin):
+def update_land_use_text(basin, start_year, end_year):
     if not basin or basin == "none":
         return "Select a basin to view land use details."
-    return read_basin_text(basin, "lu.txt")
+    
+    # If years are not yet populated, try to fetch defaults
+    if not start_year or not end_year:
+        _, s, e = get_year_options(basin)
+        start_year = s
+        end_year = e
+        
+    return generate_land_use_text(basin, start_year, end_year)
+
+@app.callback(
+    Output("land-use-table-container", "children"),
+    [Input("basin-dropdown", "value")]
+)
+def update_land_use_table(basin):
+    if not basin or basin == "none":
+        return ""
+    
+    df = parse_lu_csv(basin)
+    if df.empty:
+        return html.Div("No Land Use details available.", style={"color": "#666"})
+    
+    return dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True, responsive=True, style={"fontSize": "0.85rem"})
 
 @app.callback(
     Output("intro-search-results", "children"),
