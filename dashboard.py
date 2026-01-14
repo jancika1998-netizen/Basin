@@ -1335,6 +1335,61 @@ def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int
     time_size = da_ts.sizes.get('time', 0)
     is_monthly = time_size >= years_count * 12
 
+    # --- 0. Legacy File Support (Static/Intro Text) ---
+    file_text = ""
+    filename = None
+    if vtype == "P": filename = "pcp.txt"
+    elif vtype == "ET": filename = "et.txt"
+    elif vtype == "P-ET": filename = "pet.txt"
+
+    if filename:
+        raw_text = read_basin_text(basin, filename)
+        if raw_text and "No text available" not in raw_text:
+            try:
+                # Calculate stats required for legacy template formatting
+                # We need the monthly climatology values (same as bar chart)
+                spatial_mean_ts = da_ts.mean(dim=["latitude", "longitude"], skipna=True)
+                if is_monthly:
+                    # Group by month (1-12) and mean across years
+                    # This gives the average monthly value (mm/month)
+                    monthly_clim_da = spatial_mean_ts.groupby("time.month").mean(skipna=True)
+
+                    # Reorder to water year (Oct-Sep) for consistency with bar chart finding peak/low?
+                    # The template just asks for max/min month name.
+                    y_vals = monthly_clim_da.values
+                    month_idxs = monthly_clim_da["month"].values # 1-12
+
+                    mean_val = np.nanmean(y_vals)
+                    max_val = np.nanmax(y_vals)
+                    min_val = np.nanmin(y_vals)
+
+                    max_idx = np.nanargmax(y_vals)
+                    min_idx = np.nanargmin(y_vals)
+
+                    import calendar
+                    max_month = calendar.month_name[month_idxs[max_idx]]
+                    min_month = calendar.month_name[month_idxs[min_idx]]
+                else:
+                    # Non-monthly data fallback
+                    mean_val = float(spatial_mean_ts.mean())
+                    max_val = float(spatial_mean_ts.max())
+                    min_val = float(spatial_mean_ts.min())
+                    max_month = "N/A"
+                    min_month = "N/A"
+
+                file_text = raw_text.format(
+                    mean=mean_val,
+                    max=max_val,
+                    min=min_val,
+                    max_month=max_month,
+                    min_month=min_month,
+                    start_year=start_year,
+                    end_year=end_year
+                )
+            except Exception as e:
+                # If formatting fails (e.g., text is static with no braces), use raw text
+                file_text = raw_text
+
     # --- 1. Annual Map & Spatial Analysis ---
     if is_monthly:
         # Sum monthly to get annual totals (mm/year)
@@ -1433,7 +1488,7 @@ def _generate_explanation(vtype: str, basin: str, start_year: int, end_year: int
                             f"and the lowest values occur in {low_months_str}.")
 
     # Combine
-    full_text = f"{spatial_text} {temporal_text} {seasonality_text}"
+    full_text = f"{file_text}\n\n{spatial_text} {temporal_text} {seasonality_text}"
     return full_text
 
 def _hydro_figs(basin: str, start_year: int | None, end_year: int | None, vtype: str):
